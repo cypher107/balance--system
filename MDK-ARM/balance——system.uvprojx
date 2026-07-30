@@ -707,70 +707,30 @@
               <FileType>5</FileType>
               <FilePath>..\User\Bsp\OLEDFont.h</FilePath>
             </File>
-            <File>
-              <FileName>tjc_usart_hmi.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\User\Bsp\tjc_usart_hmi.c</FilePath>
-            </File>
-            <File>
-              <FileName>tjc_usart_hmi.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\Bsp\tjc_usart_hmi.h</FilePath>
-            </File>
-            <File>
-              <FileName>ME01.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\User\Bsp\ME01.c</FilePath>
-            </File>
-            <File>
-              <FileName>ME01.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\Bsp\ME01.h</FilePath>
-            </File>
           </Files>
         </Group>
         <Group>
           <GroupName>APP</GroupName>
           <Files>
             <File>
-              <FileName>OLED_Menu.c</FileName>
+              <FileName>M0_Menu_Test.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\User\App\OLED_Menu.c</FilePath>
+              <FilePath>..\User\App\M0_Menu_Test.c</FilePath>
             </File>
             <File>
-              <FileName>OLED_Menu.h</FileName>
+              <FileName>M0_Menu_Test.h</FileName>
               <FileType>5</FileType>
-              <FilePath>..\User\App\OLED_Menu.h</FilePath>
+              <FilePath>..\User\App\M0_Menu_Test.h</FilePath>
             </File>
             <File>
-              <FileName>ControlSettings.c</FileName>
+              <FileName>Vision.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\User\App\ControlSettings.c</FilePath>
+              <FilePath>..\User\App\Vision.c</FilePath>
             </File>
             <File>
-              <FileName>ControlSettings.h</FileName>
+              <FileName>Vision.h</FileName>
               <FileType>5</FileType>
-              <FilePath>..\User\App\ControlSettings.h</FilePath>
-            </File>
-            <File>
-              <FileName>Screen.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\User\App\Screen.c</FilePath>
-            </File>
-            <File>
-              <FileName>Screen.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\App\Screen.h</FilePath>
-            </File>
-            <File>
-              <FileName>vofa.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\User\App\vofa.c</FilePath>
-            </File>
-            <File>
-              <FileName>vofa.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\App\vofa.h</FilePath>
+              <FilePath>..\User\App\Vision.h</FilePath>
             </File>
             <File>
               <FileName>BallBeam.c</FileName>
@@ -781,6 +741,16 @@
               <FileName>BallBeam.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\User\App\BallBeam.h</FilePath>
+            </File>
+            <File>
+              <FileName>vofa.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\App\vofa.c</FilePath>
+            </File>
+            <File>
+              <FileName>vofa.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\App\vofa.h</FilePath>
             </File>
           </Files>
         </Group>

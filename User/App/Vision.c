@@ -1,31 +1,35 @@
 #include "Vision.h"
 
-#include <stdlib.h>
 #include <string.h>
 
 #include "dwt_time.h"
 
-#define VISION_DMA_BUFFER_SIZE 128U
-#define VISION_RING_SIZE       256U
-#define VISION_LINE_SIZE       80U
+#define VISION_RX_BUFFER_SIZE  64U
+#define VISION_RING_SIZE       128U
+#define VISION_FRAME_SIZE      4U
+#define VISION_FRAME_HEADER    0xAAU
+#define VISION_FRAME_TAIL      0x55U
+#define VISION_POSITION_SCALE  0.01f
 
 static UART_HandleTypeDef *vision_uart;
-static uint8_t vision_dma_buffer[VISION_DMA_BUFFER_SIZE];
+static uint8_t vision_rx_buffer[VISION_RX_BUFFER_SIZE];
 static volatile uint8_t vision_ring[VISION_RING_SIZE];
 static volatile uint16_t vision_ring_head;
 static volatile uint16_t vision_ring_tail;
 static volatile uint8_t vision_restart_required;
-static uint16_t vision_dma_position;
-static char vision_line[VISION_LINE_SIZE];
-static uint16_t vision_line_length;
+static uint8_t vision_frame[VISION_FRAME_SIZE];
+static uint8_t vision_frame_index;
 static Vision_BallSample_t vision_latest_sample;
 
+volatile uint16_t g_vision_position_raw_debug;
+volatile float g_vision_position_cm_debug;
 volatile float g_vision_position_debug;
-volatile uint8_t g_vision_quality_debug;
 volatile uint32_t g_vision_frame_count_debug;
 volatile uint32_t g_vision_parse_error_debug;
 volatile uint32_t g_vision_rx_overflow_debug;
+volatile uint8_t g_vision_rx_status_debug;
 volatile uint8_t g_vision_dma_status_debug;
+volatile uint8_t g_vision_rx_byte_debug;
 
 static void Vision_RingWrite(const uint8_t *data, uint16_t length)
 {
@@ -58,7 +62,7 @@ static uint8_t Vision_RingRead(uint8_t *data)
   return 1U;
 }
 
-static HAL_StatusTypeDef Vision_StartDma(void)
+static HAL_StatusTypeDef Vision_StartReceive(void)
 {
   HAL_StatusTypeDef status;
 
@@ -67,81 +71,64 @@ static HAL_StatusTypeDef Vision_StartDma(void)
     return HAL_ERROR;
   }
 
-  vision_dma_position = 0U;
-  status = HAL_UARTEx_ReceiveToIdle_DMA(vision_uart,
-                                       vision_dma_buffer,
-                                       VISION_DMA_BUFFER_SIZE);
-  if ((status == HAL_OK) && (vision_uart->hdmarx != 0))
-  {
-    __HAL_DMA_DISABLE_IT(vision_uart->hdmarx, DMA_IT_HT);
-  }
-
+  status = HAL_UARTEx_ReceiveToIdle_IT(vision_uart,
+                                      vision_rx_buffer,
+                                      VISION_RX_BUFFER_SIZE);
+  g_vision_rx_status_debug = (uint8_t)status;
   g_vision_dma_status_debug = (uint8_t)status;
   return status;
 }
 
-static uint8_t Vision_ParseLine(char *line, Vision_BallSample_t *sample)
+static void Vision_PublishSample(uint16_t position_raw)
 {
-  char *cursor;
-  char *end;
-  unsigned long value;
-  float position;
+  Vision_BallSample_t sample;
 
-  if ((line == 0) || (sample == 0) || (strncmp(line, "BALL,", 5U) != 0))
-  {
-    return 0U;
-  }
+  sample.position_raw = position_raw;
+  sample.position_cm = (float)position_raw * VISION_POSITION_SCALE;
+  sample.receive_cycles = DWT_Time_GetCycles();
+  sample.sequence = vision_latest_sample.sequence + 1U;
+  vision_latest_sample = sample;
 
-  cursor = line + 5;
-  position = strtof(cursor, &end);
-  if ((end == cursor) || (*end != ','))
-  {
-    return 0U;
-  }
-
-  cursor = end + 1;
-  value = strtoul(cursor, &end, 10);
-  if ((end == cursor) || (*end != ',') || (value > 100UL))
-  {
-    return 0U;
-  }
-  sample->quality = (uint8_t)value;
-
-  cursor = end + 1;
-  value = strtoul(cursor, &end, 10);
-  if (end == cursor)
-  {
-    return 0U;
-  }
-  while ((*end == ' ') || (*end == '\r'))
-  {
-    end++;
-  }
-  if (*end != '\0')
-  {
-    return 0U;
-  }
-
-  if ((position != position) ||
-      (position < -10000.0f) || (position > 10000.0f))
-  {
-    return 0U;
-  }
-
-  sample->position_mm = position;
-  sample->source_time_ms = (uint32_t)value;
-  sample->receive_cycles = DWT_Time_GetCycles();
-  return 1U;
+  g_vision_position_raw_debug = position_raw;
+  g_vision_position_cm_debug = sample.position_cm;
+  g_vision_position_debug = sample.position_cm;
+  g_vision_frame_count_debug++;
 }
 
-static void Vision_PublishSample(Vision_BallSample_t *sample)
+static void Vision_ParseByte(uint8_t data)
 {
-  sample->sequence = vision_latest_sample.sequence + 1U;
-  vision_latest_sample = *sample;
+  if (vision_frame_index == 0U)
+  {
+    if (data == VISION_FRAME_HEADER)
+    {
+      vision_frame[0] = data;
+      vision_frame_index = 1U;
+    }
+    return;
+  }
 
-  g_vision_position_debug = sample->position_mm;
-  g_vision_quality_debug = sample->quality;
-  g_vision_frame_count_debug++;
+  vision_frame[vision_frame_index++] = data;
+  if (vision_frame_index < VISION_FRAME_SIZE)
+  {
+    return;
+  }
+
+  if (vision_frame[3] == VISION_FRAME_TAIL)
+  {
+    uint16_t position_raw = (uint16_t)vision_frame[1] |
+                            ((uint16_t)vision_frame[2] << 8U);
+    Vision_PublishSample(position_raw);
+    vision_frame_index = 0U;
+  }
+  else
+  {
+    g_vision_parse_error_debug++;
+    vision_frame_index = (data == VISION_FRAME_HEADER) ? 1U : 0U;
+    if (vision_frame_index != 0U)
+    {
+      vision_frame[0] = data;
+    }
+  }
 }
 
 void Vision_Init(UART_HandleTypeDef *huart)
@@ -150,17 +137,20 @@ void Vision_Init(UART_HandleTypeDef *huart)
   vision_ring_head = 0U;
   vision_ring_tail = 0U;
   vision_restart_required = 0U;
-  vision_line_length = 0U;
+  vision_frame_index = 0U;
   memset(&vision_latest_sample, 0, sizeof(vision_latest_sample));
 
+  g_vision_position_raw_debug = 0U;
+  g_vision_position_cm_debug = 0.0f;
   g_vision_position_debug = 0.0f;
-  g_vision_quality_debug = 0U;
   g_vision_frame_count_debug = 0U;
   g_vision_parse_error_debug = 0U;
   g_vision_rx_overflow_debug = 0U;
+  g_vision_rx_status_debug = (uint8_t)HAL_ERROR;
   g_vision_dma_status_debug = (uint8_t)HAL_ERROR;
+  g_vision_rx_byte_debug = 0U;
 
-  (void)Vision_StartDma();
+  (void)Vision_StartReceive();
 }
 
 void Vision_Task(void)
@@ -171,35 +161,12 @@ void Vision_Task(void)
   {
     vision_restart_required = 0U;
     (void)HAL_UART_AbortReceive(vision_uart);
-    (void)Vision_StartDma();
+    (void)Vision_StartReceive();
   }
 
   while (Vision_RingRead(&data) != 0U)
   {
-    if (data == '\n')
-    {
-      Vision_BallSample_t sample;
-
-      vision_line[vision_line_length] = '\0';
-      if (Vision_ParseLine(vision_line, &sample) != 0U)
-      {
-        Vision_PublishSample(&sample);
-      }
-      else if (vision_line_length > 0U)
-      {
-        g_vision_parse_error_debug++;
-      }
-      vision_line_length = 0U;
-    }
-    else if (vision_line_length < (VISION_LINE_SIZE - 1U))
-    {
-      vision_line[vision_line_length++] = (char)data;
-    }
-    else
-    {
-      vision_line_length = 0U;
-      g_vision_parse_error_debug++;
-    }
+    Vision_ParseByte(data);
   }
 }
 
@@ -207,27 +174,21 @@ void Vision_UART_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)
 {
   if ((huart == 0) || (vision_uart == 0) ||
       (huart->Instance != vision_uart->Instance) ||
-      (size > VISION_DMA_BUFFER_SIZE))
+      (size > VISION_RX_BUFFER_SIZE))
   {
     return;
   }
 
-  if (size > vision_dma_position)
+  if (size > 0U)
   {
-    Vision_RingWrite(&vision_dma_buffer[vision_dma_position],
-                     (uint16_t)(size - vision_dma_position));
-  }
-  else if (size < vision_dma_position)
-  {
-    Vision_RingWrite(&vision_dma_buffer[vision_dma_position],
-                     (uint16_t)(VISION_DMA_BUFFER_SIZE - vision_dma_position));
-    if (size > 0U)
-    {
-      Vision_RingWrite(vision_dma_buffer, size);
-    }
+    Vision_RingWrite(vision_rx_buffer, size);
+    g_vision_rx_byte_debug = vision_rx_buffer[size - 1U];
   }
 
-  vision_dma_position = size;
+  if (Vision_StartReceive() != HAL_OK)
+  {
+    vision_restart_required = 1U;
+  }
 }
 
 void Vision_UART_ErrorCallback(UART_HandleTypeDef *huart)
@@ -241,25 +202,42 @@ void Vision_UART_ErrorCallback(UART_HandleTypeDef *huart)
 
 uint8_t Vision_GetLatest(Vision_BallSample_t *sample, uint32_t *last_sequence)
 {
-  if ((sample == 0) || (last_sequence == 0) ||
-      (vision_latest_sample.sequence == *last_sequence))
+  uint32_t primask;
+  uint32_t sequence;
+
+  if ((sample == 0) || (last_sequence == 0))
   {
     return 0U;
   }
 
+  primask = __get_PRIMASK();
+  __disable_irq();
+  sequence = vision_latest_sample.sequence;
+  if (sequence == *last_sequence)
+  {
+    if (primask == 0U) __enable_irq();
+    return 0U;
+  }
+
   *sample = vision_latest_sample;
-  *last_sequence = sample->sequence;
+  *last_sequence = sequence;
+  if (primask == 0U) __enable_irq();
   return 1U;
 }
 
-void Vision_InjectSample(float position_mm, uint8_t quality)
+void Vision_InjectSample(float position_cm)
 {
-  Vision_BallSample_t sample;
+  uint32_t position_raw;
 
-  sample.position_mm = position_mm;
-  sample.quality = quality;
-  sample.source_time_ms = HAL_GetTick();
-  sample.receive_cycles = DWT_Time_GetCycles();
-  sample.sequence = 0U;
-  Vision_PublishSample(&sample);
+  if (position_cm < 0.0f)
+  {
+    position_cm = 0.0f;
+  }
+  else if (position_cm > 655.35f)
+  {
+    position_cm = 655.35f;
+  }
+
+  position_raw = (uint32_t)(position_cm * 100.0f + 0.5f);
+  Vision_PublishSample((uint16_t)position_raw);
 }

@@ -28,11 +28,9 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "OLED.h"
-#include "OLED_Menu.h"
-#include "Screen.h"
+#include "M0_Menu_Test.h"
+#include "Vision.h"
 #include "BallBeam.h"
-#include "ControlSettings.h"
-#include "ME01.h"
 #include "dwt_time.h"
 
 /* USER CODE END Includes */
@@ -105,21 +103,19 @@ int main(void)
   MX_UART4_Init();
   MX_UART5_Init();
   MX_USART1_UART_Init();
-  MX_USART2_UART_Init();
   MX_USART3_UART_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
   DWT_Time_Init();
-  Screen_Init();
-  ME01_Init(&huart2);
+  Vision_Init(&huart4);
   BallBeam_Init();
-  ControlSettings_Init();
+  BallBeam_SetRun(1U);
   if (HAL_I2C_IsDeviceReady(&hi2c1,
                             (uint16_t)(OLED_ADDRESS << 1U),
                             2U,
                             10U) == HAL_OK)
   {
-    OLED_Menu_Init();
+    M0_MenuTest_Init();
     oled_menu_ready = 1U;
   }
 
@@ -132,13 +128,11 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    ME01_Task();
+    Vision_Task();
     BallBeam_Task();
-    ControlSettings_Task();
-    Screen_Task();
     if (oled_menu_ready != 0U)
     {
-      OLED_Menu_Task();
+      M0_MenuTest_Task();
     }
   }
   /* USER CODE END 3 */
@@ -184,38 +178,33 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-  Screen_UART4_RxCpltCallback(huart);
-}
-
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)
 {
-  ME01_UART_RxEventCallback(huart, size);
+  Vision_UART_RxEventCallback(huart, size);
 }
 
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
-  ME01_UART_ErrorCallback(huart);
+  Vision_UART_ErrorCallback(huart);
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
   if (GPIO_Pin == KEY_UP_Pin)
   {
-    OLED_Menu_Input(OLED_MENU_KEY_UP);
+    M0_MenuTest_Input(M0_MENU_KEY_UP);
   }
   else if (GPIO_Pin == KEY_DOWN_Pin)
   {
-    OLED_Menu_Input(OLED_MENU_KEY_DOWN);
+    M0_MenuTest_Input(M0_MENU_KEY_DOWN);
   }
   else if (GPIO_Pin == KEY_ENTER_Pin)
   {
-    OLED_Menu_Input(OLED_MENU_KEY_ENTER);
+    M0_MenuTest_Input(M0_MENU_KEY_OK);
   }
   else if (GPIO_Pin == KEY_BACK_Pin)
   {
-    OLED_Menu_Input(OLED_MENU_KEY_BACK);
+    M0_MenuTest_Input(M0_MENU_KEY_GO);
   }
 }
 
