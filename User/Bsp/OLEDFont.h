@@ -220,7 +220,7 @@ char Hzk[][32]={
 /* (16 X 16 , 宋体 )*/
 };
 
-#elif (I2C_MODE == 2)
+#elif ((I2C_MODE == 2) || (I2C_MODE == 3))
 const unsigned char asc2_0806[][6] =
 {
 {0x00, 0x00, 0x00, 0x00, 0x00, 0x00},// sp

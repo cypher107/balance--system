@@ -20,7 +20,6 @@
 #include "main.h"
 #include "crc.h"
 #include "dma.h"
-#include "i2c.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -46,6 +45,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define APP_OLED_ENABLED 0U
 
 /* USER CODE END PD */
 
@@ -109,7 +109,6 @@ int main(void)
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
-  MX_I2C1_Init();
   MX_TIM3_Init();
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
@@ -121,13 +120,12 @@ int main(void)
   APP_SENSOR_Init(&huart3);
   Motor_Init();
   Tracking_Init();
-  if (HAL_I2C_IsDeviceReady(&hi2c1,
-                            (uint16_t)(OLED_ADDRESS << 1U),
-                            2U,
-                            10U) == HAL_OK)
+#if (APP_OLED_ENABLED != 0U)
+  if (OLED_IsReady() != 0U)
   {
     oled_ready = 1U;
   }
+#endif
   TaskManager_Init(oled_ready);
 
   /* Wait for the motor driver to finish powering up, then force homing. */

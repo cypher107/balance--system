@@ -6,7 +6,11 @@
  */
 #include "OLED.h"
 #include "OLEDFont.h"
+#if (I2C_MODE == 2)
 #include "i2c.h"
+#elif (I2C_MODE == 3)
+#include "main.h"
+#endif
 
 #if (I2C_MODE == 1)
 
@@ -333,19 +337,198 @@ void OLED_Refresh(void)
 	}
 }
 
-#elif (I2C_MODE == 2)
+#elif ((I2C_MODE == 2) || (I2C_MODE == 3))
+volatile uint32_t g_oled_i2c_tx_count_debug;
+volatile uint32_t g_oled_i2c_probe_count_debug;
+volatile uint32_t g_oled_i2c_nack_count_debug;
+volatile uint8_t g_oled_i2c_last_ack_debug;
+volatile uint8_t g_oled_i2c_scl_level_debug;
+volatile uint8_t g_oled_i2c_sda_level_debug;
+
+#if (I2C_MODE == 3)
+#define OLED_SOFT_I2C_HALF_PERIOD_US 5U
+#define OLED_SOFT_I2C_PROBE_RETRIES 20U
+
+static void OLED_SoftI2C_Delay(void)
+{
+  uint32_t start_cycles;
+  uint32_t delay_cycles;
+
+  start_cycles = DWT->CYCCNT;
+  delay_cycles = (SystemCoreClock / 1000000U) *
+                 OLED_SOFT_I2C_HALF_PERIOD_US;
+  while ((uint32_t)(DWT->CYCCNT - start_cycles) < delay_cycles)
+  {
+  }
+}
+
+static void OLED_SoftI2C_UpdatePinDebug(void)
+{
+  g_oled_i2c_scl_level_debug =
+      (HAL_GPIO_ReadPin(OLED_SCL_GPIO_Port, OLED_SCL_Pin) ==
+       GPIO_PIN_SET) ? 1U : 0U;
+  g_oled_i2c_sda_level_debug =
+      (HAL_GPIO_ReadPin(OLED_SDA_GPIO_Port, OLED_SDA_Pin) ==
+       GPIO_PIN_SET) ? 1U : 0U;
+}
+
+static void OLED_SoftI2C_Start(void)
+{
+  HAL_GPIO_WritePin(OLED_SDA_GPIO_Port, OLED_SDA_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(OLED_SCL_GPIO_Port, OLED_SCL_Pin, GPIO_PIN_SET);
+  OLED_SoftI2C_Delay();
+  HAL_GPIO_WritePin(OLED_SDA_GPIO_Port, OLED_SDA_Pin, GPIO_PIN_RESET);
+  OLED_SoftI2C_Delay();
+  HAL_GPIO_WritePin(OLED_SCL_GPIO_Port, OLED_SCL_Pin, GPIO_PIN_RESET);
+  OLED_SoftI2C_Delay();
+}
+
+static void OLED_SoftI2C_Stop(void)
+{
+  HAL_GPIO_WritePin(OLED_SDA_GPIO_Port, OLED_SDA_Pin, GPIO_PIN_RESET);
+  OLED_SoftI2C_Delay();
+  HAL_GPIO_WritePin(OLED_SCL_GPIO_Port, OLED_SCL_Pin, GPIO_PIN_SET);
+  OLED_SoftI2C_Delay();
+  HAL_GPIO_WritePin(OLED_SDA_GPIO_Port, OLED_SDA_Pin, GPIO_PIN_SET);
+  OLED_SoftI2C_Delay();
+  OLED_SoftI2C_UpdatePinDebug();
+}
+
+static uint8_t OLED_SoftI2C_WriteByte(uint8_t value)
+{
+  uint8_t bit_index;
+  uint8_t acknowledged;
+
+  for (bit_index = 0U; bit_index < 8U; bit_index++)
+  {
+    HAL_GPIO_WritePin(OLED_SCL_GPIO_Port, OLED_SCL_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(OLED_SDA_GPIO_Port,
+                      OLED_SDA_Pin,
+                      ((value & 0x80U) != 0U) ?
+                          GPIO_PIN_SET : GPIO_PIN_RESET);
+    OLED_SoftI2C_Delay();
+    HAL_GPIO_WritePin(OLED_SCL_GPIO_Port, OLED_SCL_Pin, GPIO_PIN_SET);
+    OLED_SoftI2C_Delay();
+    value <<= 1U;
+  }
+
+  HAL_GPIO_WritePin(OLED_SCL_GPIO_Port, OLED_SCL_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(OLED_SDA_GPIO_Port, OLED_SDA_Pin, GPIO_PIN_SET);
+  OLED_SoftI2C_Delay();
+  HAL_GPIO_WritePin(OLED_SCL_GPIO_Port, OLED_SCL_Pin, GPIO_PIN_SET);
+  OLED_SoftI2C_Delay();
+  acknowledged =
+      (HAL_GPIO_ReadPin(OLED_SDA_GPIO_Port, OLED_SDA_Pin) ==
+       GPIO_PIN_RESET) ? 1U : 0U;
+  HAL_GPIO_WritePin(OLED_SCL_GPIO_Port, OLED_SCL_Pin, GPIO_PIN_RESET);
+  OLED_SoftI2C_Delay();
+  return acknowledged;
+}
+
+static void OLED_SoftI2C_RecoverBus(void)
+{
+  uint8_t pulse_index;
+
+  HAL_GPIO_WritePin(OLED_SDA_GPIO_Port, OLED_SDA_Pin, GPIO_PIN_SET);
+  for (pulse_index = 0U; pulse_index < 9U; pulse_index++)
+  {
+    HAL_GPIO_WritePin(OLED_SCL_GPIO_Port, OLED_SCL_Pin, GPIO_PIN_RESET);
+    OLED_SoftI2C_Delay();
+    HAL_GPIO_WritePin(OLED_SCL_GPIO_Port, OLED_SCL_Pin, GPIO_PIN_SET);
+    OLED_SoftI2C_Delay();
+  }
+  OLED_SoftI2C_Stop();
+}
+
+static uint8_t OLED_SoftI2C_Probe(void)
+{
+  uint8_t acknowledged;
+
+  OLED_SoftI2C_Start();
+  acknowledged = OLED_SoftI2C_WriteByte(
+      (uint8_t)(OLED_ADDRESS << 1U));
+  OLED_SoftI2C_Stop();
+  return acknowledged;
+}
+
+static uint8_t OLED_SoftI2C_Transmit(uint8_t control, uint8_t data)
+{
+  uint8_t acknowledged = 1U;
+
+  OLED_SoftI2C_Start();
+  acknowledged &= OLED_SoftI2C_WriteByte(
+      (uint8_t)(OLED_ADDRESS << 1U));
+  acknowledged &= OLED_SoftI2C_WriteByte(control);
+  acknowledged &= OLED_SoftI2C_WriteByte(data);
+  OLED_SoftI2C_Stop();
+
+  g_oled_i2c_tx_count_debug++;
+  g_oled_i2c_last_ack_debug = acknowledged;
+  if (acknowledged == 0U)
+  {
+    g_oled_i2c_nack_count_debug++;
+  }
+  return acknowledged;
+}
+
+uint8_t OLED_IsReady(void)
+{
+  uint8_t attempt;
+
+  CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+  HAL_GPIO_WritePin(OLED_SCL_GPIO_Port, OLED_SCL_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(OLED_SDA_GPIO_Port, OLED_SDA_Pin, GPIO_PIN_SET);
+  OLED_SoftI2C_RecoverBus();
+
+  for (attempt = 0U; attempt < OLED_SOFT_I2C_PROBE_RETRIES; attempt++)
+  {
+    g_oled_i2c_probe_count_debug++;
+    g_oled_i2c_last_ack_debug = OLED_SoftI2C_Probe();
+    if (g_oled_i2c_last_ack_debug != 0U)
+    {
+      return 1U;
+    }
+    g_oled_i2c_nack_count_debug++;
+    HAL_Delay(5U);
+  }
+  return 0U;
+}
+
 void I2C_WriteByte(uint8_t addr, uint8_t dat)
 {
+  (void)OLED_SoftI2C_Transmit(addr, dat);
+}
+
+#else
+uint8_t OLED_IsReady(void)
+{
+  return (HAL_I2C_IsDeviceReady(&hi2c1,
+                                (uint16_t)(OLED_ADDRESS << 1U),
+                                2U,
+                                10U) == HAL_OK) ? 1U : 0U;
+}
+
+void I2C_WriteByte(uint8_t addr, uint8_t dat)
+{
+  HAL_StatusTypeDef status;
   uint8_t temp[2];
   temp[0] = addr;
   temp[1] = dat;
 
-  (void)HAL_I2C_Master_Transmit(&hi2c1,
-                                (uint16_t)(OLED_ADDRESS << 1U),
-                                temp,
-                                2U,
-                                100U);
+  status = HAL_I2C_Master_Transmit(&hi2c1,
+                                   (uint16_t)(OLED_ADDRESS << 1U),
+                                   temp,
+                                   2U,
+                                   100U);
+  g_oled_i2c_tx_count_debug++;
+  g_oled_i2c_last_ack_debug = (status == HAL_OK) ? 1U : 0U;
+  if (status != HAL_OK)
+  {
+    g_oled_i2c_nack_count_debug++;
+  }
 }
+#endif
 
 
 void WriteCmd(unsigned char I2C_Command)

@@ -6,10 +6,11 @@
 typedef enum{
 	SOFT_IIC = 1,
 	HARDWARE_IIC = 2,
+	STM32_SOFT_IIC = 3,
 }I2C_USE;
 
 /***** 软件IIC和硬件IIC切换 *****/
-#define I2C_MODE 2
+#define I2C_MODE 3
 /***** 软件IIC和硬件IIC切换 *****/
 
 #if (I2C_MODE == 1)
@@ -64,8 +65,17 @@ void Write_IIC_Byte(unsigned char IIC_Byte);
 void IIC_Wait_Ack(void);
 void OLED_Refresh(void);
 
-#elif (I2C_MODE == 2)
+#elif ((I2C_MODE == 2) || (I2C_MODE == 3))
 #define OLED_ADDRESS	0x3c
+
+extern volatile uint32_t g_oled_i2c_tx_count_debug;
+extern volatile uint32_t g_oled_i2c_probe_count_debug;
+extern volatile uint32_t g_oled_i2c_nack_count_debug;
+extern volatile uint8_t g_oled_i2c_last_ack_debug;
+extern volatile uint8_t g_oled_i2c_scl_level_debug;
+extern volatile uint8_t g_oled_i2c_sda_level_debug;
+
+uint8_t OLED_IsReady(void);
 
 void OLED_Init(void);
 void OLED_SetPos(unsigned char x, unsigned char y);
