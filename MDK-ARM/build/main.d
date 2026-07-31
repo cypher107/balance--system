@@ -37,10 +37,13 @@ build\main.o: ../Core/Inc/tim.h
 build\main.o: ../Core/Inc/usart.h
 build\main.o: ../Core/Inc/gpio.h
 build\main.o: ../User/Bsp/OLED.h
-build\main.o: ../User/App/OLED_Menu.h
-build\main.o: ../User/App/Screen.h
+build\main.o: ../User/App/Vision.h
 build\main.o: ../User/App/BallBeam.h
 build\main.o: ../User/Althgrom/pid.h
-build\main.o: ../User/App/ControlSettings.h
-build\main.o: ../User/Bsp/ME01.h
+build\main.o: ../User/Task/Task_Hmi.h
+build\main.o: ../User/Task/Task_Manager.h
+build\main.o: ../User/Task/Task_Types.h
+build\main.o: ../User/App/APP_SENSOR.h
+build\main.o: ../User/App/motor.h
+build\main.o: ../User/App/tracking.h
 build\main.o: ../User/Althgrom/dwt_time.h

@@ -18,6 +18,7 @@ extern volatile uint8_t g_task2_stage_debug;
 extern volatile float g_task2_elapsed_s_debug;
 extern volatile float g_task2_min_lap_time_s_debug;
 extern volatile uint8_t g_task2_finish_sensor_count_debug;
+extern volatile uint8_t g_task2_finish_middle_count_debug;
 extern volatile float g_task2_finish_confirm_s_debug;
 
 void Task2_CarLap_Start(uint32_t now_ms);

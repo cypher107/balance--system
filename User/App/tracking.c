@@ -4,9 +4,9 @@
 #include "motor.h"
 #include "pid.h"
 
-#define TRACK_DEFAULT_KP            1.2f
-#define TRACK_DEFAULT_KI            5.0f
-#define TRACK_DEFAULT_KD            0.002f
+#define TRACK_DEFAULT_KP            18.0f
+#define TRACK_DEFAULT_KI            0.0f
+#define TRACK_DEFAULT_KD            0.000f
 #define TRACK_PERIOD_S              0.01f
 #define TRACK_LOST_STOP_COUNT       20U
 #define TRACK_OUTPUT_LIMIT          300.0f
@@ -19,7 +19,9 @@ static float tracking_last_position;
 volatile float g_tracking_kp_debug = TRACK_DEFAULT_KP;
 volatile float g_tracking_ki_debug = TRACK_DEFAULT_KI;
 volatile float g_tracking_kd_debug = TRACK_DEFAULT_KD;
-volatile float g_tracking_base_speed_debug = 300.0f;
+volatile float g_tracking_base_speed_debug = 200.0f;
+volatile float g_tracking_left_speed_scale_debug = 1.3f;
+volatile float g_tracking_right_speed_scale_debug = 1.0f;
 volatile float g_tracking_position_debug;
 volatile float g_tracking_pid_output_debug;
 volatile uint8_t g_tracking_active_count_debug;
@@ -126,6 +128,8 @@ void Tracking_Process(void)
 {
   float base_speed;
   float pid_output;
+  float left_scale;
+  float right_scale;
   int16_t left_speed;
   int16_t right_speed;
 
@@ -158,8 +162,12 @@ void Tracking_Process(void)
                                g_tracking_position_debug,
                                TRACK_PERIOD_S);
   g_tracking_pid_output_debug = pid_output;
-  left_speed = (int16_t)(base_speed - pid_output);
-  right_speed = (int16_t)(base_speed + pid_output);
+  left_scale = g_tracking_left_speed_scale_debug;
+  right_scale = g_tracking_right_speed_scale_debug;
+  if ((left_scale < 0.0f) || (left_scale > 2.0f)) left_scale = 1.0f;
+  if ((right_scale < 0.0f) || (right_scale > 2.0f)) right_scale = 1.0f;
+  left_speed = (int16_t)((base_speed - pid_output) * left_scale);
+  right_speed = (int16_t)((base_speed + pid_output) * right_scale);
   Motor_SetSpeed(left_speed, right_speed);
 }
 

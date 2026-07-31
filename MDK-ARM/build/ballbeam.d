@@ -37,4 +37,4 @@ build\ballbeam.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h
 build\ballbeam.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h
 build\ballbeam.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h
 build\ballbeam.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h
-build\ballbeam.o: ../User/Bsp/ME01.h
+build\ballbeam.o: ..\User\App\Vision.h

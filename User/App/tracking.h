@@ -11,6 +11,8 @@ extern volatile float g_tracking_kp_debug;
 extern volatile float g_tracking_ki_debug;
 extern volatile float g_tracking_kd_debug;
 extern volatile float g_tracking_base_speed_debug;
+extern volatile float g_tracking_left_speed_scale_debug;
+extern volatile float g_tracking_right_speed_scale_debug;
 extern volatile float g_tracking_position_debug;
 extern volatile float g_tracking_pid_output_debug;
 extern volatile uint8_t g_tracking_active_count_debug;

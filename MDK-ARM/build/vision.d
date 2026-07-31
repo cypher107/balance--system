@@ -32,6 +32,5 @@ build\vision.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h
 build\vision.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h
 build\vision.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h
 build\vision.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h
-build\vision.o: C:\Users\17014\AppData\Local\Keil_v5\ARM\ARMCC\Bin\..\include\stdlib.h
 build\vision.o: C:\Users\17014\AppData\Local\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
 build\vision.o: ../User/Althgrom/dwt_time.h
