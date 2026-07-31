@@ -19,7 +19,7 @@ volatile float g_task2_elapsed_s_debug;
 volatile float g_task2_min_lap_time_s_debug = 3.0f;
 volatile uint8_t g_task2_finish_sensor_count_debug = 3U;
 volatile uint8_t g_task2_finish_middle_count_debug;
-volatile float g_task2_finish_confirm_s_debug = 0.30f;
+volatile float g_task2_finish_confirm_s_debug = 0.80f;
 volatile int16_t g_task2_finish_left_speed_debug;
 volatile int16_t g_task2_finish_right_speed_debug;
 
@@ -89,6 +89,9 @@ Task_Result_t Task2_CarLap_Update(uint32_t now_ms)
 
   if (task2_stage == TASK2_STAGE_FINISH_CONFIRM)
   {
+    Tracking_Process();
+    g_task2_finish_left_speed_debug = g_motor_left_speed_debug;
+    g_task2_finish_right_speed_debug = g_motor_right_speed_debug;
     finish_confirm_ms =
         (uint32_t)(g_task2_finish_confirm_s_debug * 1000.0f);
     if ((now_ms - task2_finish_start_tick_ms) >= finish_confirm_ms)

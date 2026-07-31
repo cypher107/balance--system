@@ -1,97 +1,127 @@
-#ifndef __OLED_H
-#define	__OLED_H
+/**
+ * @file    oled.h
+ * @brief   0.96寸 OLED 驱动头文件 (SSD1306, I2C接口, 128x64)
+ *
+ * 移植说明：
+ *   1. 修改 oled.h 中 OLED_I2C_HANDLE 指向实际使用的 I2C 句柄
+ *   2. 修改 OLED_I2C_ADDR 确认 OLED 的 I2C 地址（0x78 或 0x7A）
+ *   3. 其余代码无需修改，直接编译即可
+ */
 
-#include <stdint.h>
+#ifndef BSP_OLED_H
+#define BSP_OLED_H
 
-typedef enum{
-	SOFT_IIC = 1,
-	HARDWARE_IIC = 2,
-	STM32_SOFT_IIC = 3,
-}I2C_USE;
+#include "main.h"
 
-/***** 软件IIC和硬件IIC切换 *****/
-#define I2C_MODE 3
-/***** 软件IIC和硬件IIC切换 *****/
+/* -----------------------------------------------------------------------
+ * 移植配置区 —— 只需修改这里
+ * ----------------------------------------------------------------------- */
+#include "i2c.h"
+#define OLED_I2C_HANDLE     hi2c1      /* 使用的 I2C 句柄 */
+#define OLED_I2C_ADDR       0x78U      /* OLED I2C 地址: SA0=GND->0x78, SA0=VCC->0x7A */
+#define OLED_I2C_TIMEOUT    20U        /* HAL I2C 超时时间 (ms) */
+/* ----------------------------------------------------------------------- */
 
-#if (I2C_MODE == 1)
+#define OLED_WIDTH          128U
+#define OLED_HEIGHT         64U
+#define OLED_PAGES          (OLED_HEIGHT / 8U)
 
-#define OLED_MODE 0
-#define SIZE 8
-#define XLevelL		0x00
-#define XLevelH		0x10
-#define Max_Column	128
-#define Max_Row		64
-#define	Brightness	0xFF 
-#define X_WIDTH 	128
-#define Y_WIDTH 	64	    						  
-//-----------------OLED IIC端口定义----------------
-
-
-#define OLED_SCLK_Clr() DL_GPIO_clearPins(PORTA_PORT, I2C_SCL_PIN);;//SCL
-#define OLED_SCLK_Set() DL_GPIO_setPins(PORTA_PORT, I2C_SCL_PIN);;
-
-#define OLED_SDIN_Clr() DL_GPIO_clearPins(PORTA_PORT, I2C_SDA_PIN);//SDA
-#define OLED_SDIN_Set() DL_GPIO_setPins(PORTA_PORT, I2C_SDA_PIN);
-
- 		     
-#define OLED_CMD  0	//写命令
-#define OLED_DATA 1	//写数据
-
-
-//OLED控制用函数
-void OLED_Show(u8 temp, u8 humi,u8 Light);
-void OLED_WR_Byte(unsigned dat,unsigned cmd);  
-void OLED_Display_On(void);
-void OLED_Display_Off(void);	   							   		    
-void OLED_Init(void);
-void OLED_Clear(void);
-void OLED_DrawPoint(u8 x,u8 y,u8 t);
-void OLED_Fill(u8 x1,u8 y1,u8 x2,u8 y2,u8 dot);
-void OLED_ShowChar(u8 x,u8 y,u8 chr,u8 Char_Size);
-void OLED_ShowNum(u8 x,u8 y,u32 num,u8 len,u8 size);
-void OLED_ShowString(u8 x,u8 y, u8 *p,u8 Char_Size);	 
-void OLED_Set_Pos(unsigned char x, unsigned char y);
-void OLED_ShowCHinese(u8 x,u8 y,u8 no);
-void OLED_DrawBMP(unsigned char x0, unsigned char y0,unsigned char x1, unsigned char y1,unsigned char BMP[]);
-void Delay_50ms(unsigned int Del_50ms);
-void Delay_1ms(unsigned int Del_1ms);
-void fill_picture(unsigned char fill_Data);
-void Picture(void);
-void IIC_Start(void);
-void IIC_Stop(void);
-void Write_IIC_Command(unsigned char IIC_Command);
-void Write_IIC_Data(unsigned char IIC_Data);
-void Write_IIC_Byte(unsigned char IIC_Byte);
-void IIC_Wait_Ack(void);
-void OLED_Refresh(void);
-
-#elif ((I2C_MODE == 2) || (I2C_MODE == 3))
-#define OLED_ADDRESS	0x3c
+/* OLED 颜色定义 */
+typedef enum {
+    OLED_COLOR_BLACK = 0,   /* 像素关闭（黑色） */
+    OLED_COLOR_WHITE = 1,   /* 像素点亮（白色） */
+    OLED_COLOR_INVERT = 2,  /* 反转当前像素 */
+} OLED_Color_t;
 
 extern volatile uint32_t g_oled_i2c_tx_count_debug;
-extern volatile uint32_t g_oled_i2c_probe_count_debug;
-extern volatile uint32_t g_oled_i2c_nack_count_debug;
-extern volatile uint8_t g_oled_i2c_last_ack_debug;
-extern volatile uint8_t g_oled_i2c_scl_level_debug;
-extern volatile uint8_t g_oled_i2c_sda_level_debug;
+extern volatile uint32_t g_oled_i2c_error_count_debug;
+extern volatile uint32_t g_oled_i2c_last_error_debug;
+extern volatile uint32_t g_oled_refresh_page_count_debug;
 
-uint8_t OLED_IsReady(void);
+/* ====================== 基础控制 ====================== */
 
-void OLED_Init(void);
-void OLED_SetPos(unsigned char x, unsigned char y);
-void OLED_Fill(unsigned char fill_Data);
-void OLED_CLS(void);
-void OLED_ON(void);
-void OLED_OFF(void);
-void OLED_ShowStr(unsigned char x, unsigned char y, unsigned char ch[], unsigned char TextSize);
-void OLED_ShowCN(unsigned char x, unsigned char y, unsigned char N);
-void OLED_DrawBMP(unsigned char x0,unsigned char y0,unsigned char x1,unsigned char y1,unsigned char BMP[]);
-void SmartCar_OLED_P8x16Str(uint8_t x, uint8_t y, const char* ch);
-#endif
+/**
+ * @brief  初始化 OLED，清屏并开启显示
+ * @retval 0: 成功, 非0: I2C通信失败
+ */
+int OLED_Init(void);
 
-#endif
+/**
+ * @brief  将显存（GRAM）内容刷新到屏幕
+ */
+void OLED_Refresh(void);
 
+/**
+ * @brief  清除显存（不立即刷新屏幕）
+ */
+void OLED_Clear(void);
 
+/**
+ * @brief  设置整屏显示开关
+ * @param  enable: 1=开显示, 0=关显示
+ */
+void OLED_SetDisplay(uint8_t enable);
 
+/* ====================== 绘图 API ====================== */
 
+/**
+ * @brief  在 (x, y) 处绘制一个像素点
+ * @param  x: 列坐标 [0, 127]
+ * @param  y: 行坐标 [0, 63]
+ * @param  color: OLED_COLOR_WHITE / BLACK / INVERT
+ */
+void OLED_DrawPixel(uint8_t x, uint8_t y, OLED_Color_t color);
 
+/**
+ * @brief  画直线（Bresenham）
+ */
+void OLED_DrawLine(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, OLED_Color_t color);
+
+/**
+ * @brief  画矩形（空心）
+ */
+void OLED_DrawRect(uint8_t x, uint8_t y, uint8_t w, uint8_t h, OLED_Color_t color);
+
+/**
+ * @brief  画填充矩形
+ */
+void OLED_FillRect(uint8_t x, uint8_t y, uint8_t w, uint8_t h, OLED_Color_t color);
+
+/**
+ * @brief  画圆（空心）
+ */
+void OLED_DrawCircle(uint8_t cx, uint8_t cy, uint8_t r, OLED_Color_t color);
+
+/* ====================== 文字 API ====================== */
+
+/**
+ * @brief  在 (x, y) 处显示 ASCII 字符（6x8 点阵）
+ * @param  x:    列坐标 [0, 127]
+ * @param  y:    行坐标 [0, 63]
+ * @param  ch:   ASCII 字符 (0x20~0x7F)
+ * @param  color: 前景色
+ */
+void OLED_DrawChar(uint8_t x, uint8_t y, char ch, OLED_Color_t color);
+
+/**
+ * @brief  在 (x, y) 处显示字符串（6x8 点阵，超出屏幕自动换行）
+ */
+void OLED_DrawString(uint8_t x, uint8_t y, const char *str, OLED_Color_t color);
+
+/**
+ * @brief  在 (x, y) 处显示整数（十进制）
+ */
+void OLED_DrawInt(uint8_t x, uint8_t y, int32_t val, OLED_Color_t color);
+
+/**
+ * @brief  在 (x, y) 处显示浮点数
+ * @param  decimals: 小数位数
+ */
+void OLED_DrawFloat(uint8_t x, uint8_t y, float val, uint8_t decimals, OLED_Color_t color);
+
+/* Compatibility API used by the existing menu code. Drawing only changes
+ * GRAM; call OLED_Refresh() once after composing a complete frame. */
+void OLED_Fill(uint8_t fill_data);
+void OLED_ShowStr(uint8_t x, uint8_t page, unsigned char text[], uint8_t text_size);
+
+#endif /* BSP_OLED_H */

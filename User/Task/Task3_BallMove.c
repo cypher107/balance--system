@@ -33,7 +33,7 @@ volatile uint32_t g_task3_settle_ms_debug;
 volatile int32_t g_task3_open_loop_pulse_debug = 61;
 volatile uint16_t g_task3_open_loop_speed_debug = 200U;
 volatile uint8_t g_task3_open_loop_acceleration_debug = 80U;
-volatile float g_task3_open_loop_switch_position_cm_debug = 17.0f;
+volatile float g_task3_open_loop_switch_position_cm_debug = 16.5f;
 volatile uint32_t g_task3_open_loop_hold_ms_debug = 50U;
 volatile uint32_t g_task3_open_loop_hold_elapsed_ms_debug;
 volatile uint8_t g_task3_open_loop_hold_active_debug;

@@ -73,6 +73,7 @@ static void TaskManager_DrawOled(void)
     TaskManager_ShowLine(0U, "WAIT HMI COMMAND");
     TaskManager_ShowLine(2U, "USART2 38400");
     TaskManager_ShowLine(4U, "TASK: 2 TO 6");
+    OLED_Refresh();
     return;
   }
 
@@ -86,6 +87,7 @@ static void TaskManager_DrawOled(void)
                  (double)g_ballbeam_position_debug);
   TaskManager_ShowLine(4U, text);
   TaskManager_ShowLine(6U, TaskManager_StatusText());
+  OLED_Refresh();
 }
 
 static void TaskManager_StopSelected(void)
@@ -133,7 +135,6 @@ void TaskManager_Init(uint8_t oled_enabled)
 
   if (task_manager_oled_enabled != 0U)
   {
-    OLED_Init();
     TaskManager_DrawOled();
   }
 }

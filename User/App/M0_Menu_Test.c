@@ -345,4 +345,5 @@ void M0_MenuTest_Task(void)
   else if ((m0_menu_mode == M0_MENU_MODE_STEP) ||
            (m0_menu_mode == M0_MENU_MODE_VALUE)) M0_MenuTest_DrawTuning();
   else M0_MenuTest_DrawStatus();
+  OLED_Refresh();
 }
