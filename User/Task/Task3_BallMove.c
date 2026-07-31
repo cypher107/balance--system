@@ -29,14 +29,14 @@ volatile float g_task3_target_debug;
 volatile float g_task3_position_debug;
 volatile float g_task3_error_debug;
 volatile uint32_t g_task3_settle_ms_debug;
-volatile int32_t g_task3_open_loop_pulse_debug = 40;
+volatile int32_t g_task3_open_loop_pulse_debug = 38;
 volatile uint16_t g_task3_open_loop_speed_debug = 100U;
 volatile uint8_t g_task3_open_loop_acceleration_debug = 80U;
 volatile float g_task3_open_loop_switch_position_cm_debug = 16.5f;
 volatile uint32_t g_task3_open_loop_hold_ms_debug = 50U;
 volatile uint32_t g_task3_open_loop_hold_elapsed_ms_debug;
 volatile uint8_t g_task3_open_loop_hold_active_debug;
-volatile float g_task3_return_kp_debug = 7.0f;//14
+volatile float g_task3_return_kp_debug = 12.0f;//14
 volatile float g_task3_return_ki_debug = 0.0f;
 volatile float g_task3_return_kd_debug = 7.0f;//30
 volatile float g_task3_return_hold_cm_debug = 0.1f;
