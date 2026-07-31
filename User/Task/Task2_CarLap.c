@@ -19,7 +19,9 @@ volatile float g_task2_elapsed_s_debug;
 volatile float g_task2_min_lap_time_s_debug = 3.0f;
 volatile uint8_t g_task2_finish_sensor_count_debug = 3U;
 volatile uint8_t g_task2_finish_middle_count_debug;
-volatile float g_task2_finish_confirm_s_debug = 0.08f;
+volatile float g_task2_finish_confirm_s_debug = 0.30f;
+volatile int16_t g_task2_finish_left_speed_debug;
+volatile int16_t g_task2_finish_right_speed_debug;
 
 static void Task2_SetStage(Task2_Stage_t stage)
 {
@@ -59,6 +61,8 @@ void Task2_CarLap_Start(uint32_t now_ms)
   task2_finish_start_tick_ms = 0U;
   g_task2_elapsed_s_debug = 0.0f;
   g_task2_finish_middle_count_debug = 0U;
+  g_task2_finish_left_speed_debug = 0;
+  g_task2_finish_right_speed_debug = 0;
   Tracking_Reset();
   Motor_Stop();
   Task2_SetStage(TASK2_STAGE_LEAVE_START);
@@ -85,11 +89,11 @@ Task_Result_t Task2_CarLap_Update(uint32_t now_ms)
 
   if (task2_stage == TASK2_STAGE_FINISH_CONFIRM)
   {
-    Motor_Stop();
     finish_confirm_ms =
         (uint32_t)(g_task2_finish_confirm_s_debug * 1000.0f);
     if ((now_ms - task2_finish_start_tick_ms) >= finish_confirm_ms)
     {
+      Motor_Stop();
       Task2_SetStage(TASK2_STAGE_DONE);
       return TASK_RESULT_DONE;
     }
@@ -111,7 +115,10 @@ Task_Result_t Task2_CarLap_Update(uint32_t now_ms)
             g_task2_min_lap_time_s_debug) &&
            (Task2_OnFinishLine() != 0U))
   {
-    Motor_Stop();
+    g_task2_finish_left_speed_debug = g_motor_left_speed_debug;
+    g_task2_finish_right_speed_debug = g_motor_right_speed_debug;
+    Motor_SetSpeed(g_task2_finish_left_speed_debug,
+                   g_task2_finish_right_speed_debug);
     task2_finish_start_tick_ms = now_ms;
     Task2_SetStage(TASK2_STAGE_FINISH_CONFIRM);
   }
