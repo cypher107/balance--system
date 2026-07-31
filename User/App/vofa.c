@@ -5,7 +5,7 @@
 #include <string.h>
 #include <stdarg.h>
 
-static UART_HandleTypeDef *vofa_uart = &huart3;
+static UART_HandleTypeDef *vofa_uart;
 static VOFA_PID_Channel_t vofa_pid_channels[VOFA_MAX_PID_CHANNELS];
 static char vofa_rx_buffer[VOFA_RX_BUFFER_SIZE];
 static uint16_t vofa_rx_index;

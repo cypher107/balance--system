@@ -54,6 +54,7 @@ extern volatile uint32_t g_ballbeam_position_count_debug;
 extern volatile uint32_t g_ballbeam_stale_count_debug;
 extern volatile uint32_t g_ballbeam_invalid_position_count_debug;
 extern volatile uint32_t g_ballbeam_hold_count_debug;
+extern volatile uint32_t g_ballbeam_home_command_count_debug;
 
 void BallBeam_Init(void);
 void BallBeam_Task(void);
@@ -61,6 +62,8 @@ void BallBeam_SetRun(uint8_t run);
 uint8_t BallBeam_GetRun(void);
 void BallBeam_SetTarget(float target_position_cm);
 float BallBeam_GetTarget(void);
+void BallBeam_CommandAbsolutePulse(int32_t signed_pulse);
+void BallBeam_TriggerHome(void);
 void BallBeam_EnableMotorOutput(uint8_t enable);
 void BallBeam_Reset(void);
 PID_t *BallBeam_GetPositionPID(void);

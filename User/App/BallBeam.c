@@ -12,6 +12,7 @@
 #define BALLBEAM_MAX_DT_S           0.20f
 #define BALLBEAM_HARD_PULSE_LIMIT   500
 #define BALLBEAM_POSITION_HOLD_CM   1.0f
+#define BALLBEAM_HOME_MODE          0U
 
 typedef struct
 {
@@ -51,6 +52,7 @@ volatile uint32_t g_ballbeam_position_count_debug;
 volatile uint32_t g_ballbeam_stale_count_debug;
 volatile uint32_t g_ballbeam_invalid_position_count_debug;
 volatile uint32_t g_ballbeam_hold_count_debug;
+volatile uint32_t g_ballbeam_home_command_count_debug;
 
 static float BallBeam_ClampFloat(float value, float minimum, float maximum)
 {
@@ -126,16 +128,12 @@ static void BallBeam_PrimePositionPid(float position_cm, float error)
   ballbeam.position_pid.last_derivative = 0.0f;
 }
 
-static void BallBeam_SendAbsolutePulse(float pid_output)
+static void BallBeam_SendSignedPulse(int32_t signed_pulse)
 {
-  float signed_target;
-  int32_t signed_pulse;
   uint8_t direction;
   uint32_t pulse;
 
-  signed_target = (float)ballbeam.config.motor_center_pulse +
-                  (pid_output * ballbeam.config.motor_direction);
-  signed_pulse = BallBeam_ClampPulse(BallBeam_RoundToInt(signed_target));
+  signed_pulse = BallBeam_ClampPulse(signed_pulse);
 
   g_ballbeam_motor_pulse_debug = signed_pulse;
   if (ballbeam.config.motor_pulses_per_revolution != 0U)
@@ -175,6 +173,17 @@ static void BallBeam_SendAbsolutePulse(float pid_output)
                      false);
   ballbeam.last_motor_pulse = signed_pulse;
   ballbeam.motor_stopped = 0U;
+}
+
+static void BallBeam_SendAbsolutePulse(float pid_output)
+{
+  float signed_target;
+  int32_t signed_pulse;
+
+  signed_target = (float)ballbeam.config.motor_center_pulse +
+                  (pid_output * ballbeam.config.motor_direction);
+  signed_pulse = BallBeam_RoundToInt(signed_target);
+  BallBeam_SendSignedPulse(signed_pulse);
 }
 
 static void BallBeam_ProcessPosition(const Vision_BallSample_t *sample,
@@ -280,8 +289,8 @@ void BallBeam_Init(void)
   ballbeam.config.position_timeout_ms = 150U;
   ballbeam.config.motor_address = 1U;
   ballbeam.config.motor_positive_direction = 0U;
-  ballbeam.config.motor_speed_rpm = 15U;
-  ballbeam.config.motor_acceleration = 5U;
+  ballbeam.config.motor_speed_rpm = 300U;
+  ballbeam.config.motor_acceleration = 255U;
   ballbeam.config.motor_pulses_per_revolution = 3200U;
   ballbeam.config.motor_center_pulse = 0;
   ballbeam.config.max_motor_pulse = BALLBEAM_HARD_PULSE_LIMIT;
@@ -325,6 +334,7 @@ void BallBeam_Init(void)
   g_ballbeam_stale_count_debug = 0U;
   g_ballbeam_invalid_position_count_debug = 0U;
   g_ballbeam_hold_count_debug = 0U;
+  g_ballbeam_home_command_count_debug = 0U;
   BallBeam_SetState(BALLBEAM_STATE_IDLE);
 }
 
@@ -418,6 +428,22 @@ void BallBeam_SetTarget(float target_position_cm)
   g_ballbeam_target_position_cm_debug = ballbeam.target_position_cm;
 }
 
+void BallBeam_CommandAbsolutePulse(int32_t signed_pulse)
+{
+  ballbeam.last_motor_pulse = INT32_MAX;
+  BallBeam_SendSignedPulse(signed_pulse);
+}
+
+void BallBeam_TriggerHome(void)
+{
+  Emm_V5_Origin_Trigger_Return(ballbeam.config.motor_address,
+                               BALLBEAM_HOME_MODE,
+                               false);
+  ballbeam.last_motor_pulse = INT32_MAX;
+  ballbeam.motor_stopped = 0U;
+  g_ballbeam_home_command_count_debug++;
+}
+
 float BallBeam_GetTarget(void)
 {
   return ballbeam.target_position_cm;
@@ -440,6 +466,7 @@ void BallBeam_Reset(void)
   BallBeam_ResetControl();
   BallBeam_SetState((ballbeam.run_requested != 0U) ?
                     BALLBEAM_STATE_ARMING : BALLBEAM_STATE_IDLE);
+  BallBeam_TriggerHome();
 }
 
 PID_t *BallBeam_GetPositionPID(void)

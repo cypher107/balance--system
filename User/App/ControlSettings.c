@@ -178,8 +178,8 @@ static void ControlSettings_Apply(const ControlSettings_Payload_t *payload)
   config->sensor_direction = (float)payload->sensor_direction;
   config->motor_direction = (float)payload->motor_direction;
   config->motor_positive_direction = payload->motor_positive_direction;
-  config->motor_speed_rpm = 15U;
-  config->motor_acceleration = 5U;
+  config->motor_speed_rpm = 300U;
+  config->motor_acceleration = 255U;
   PID_SetOutputLimit(position_pid,
                      -config->max_beam_angle_deg,
                      config->max_beam_angle_deg);

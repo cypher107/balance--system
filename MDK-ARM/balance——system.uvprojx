@@ -341,7 +341,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32F103xE</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F1xx/Include;../Drivers/CMSIS/Include;../User/ZDT;../User/Althgrom;../User/App;../User/Bsp</IncludePath>
+              <IncludePath>../Core/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F1xx/Include;../Drivers/CMSIS/Include;../User/ZDT;../User/Althgrom;../User/App;../User/Bsp;../User/Task</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -707,21 +707,21 @@
               <FileType>5</FileType>
               <FilePath>..\User\Bsp\OLEDFont.h</FilePath>
             </File>
+            <File>
+              <FileName>BSP_CRC.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\Bsp\BSP_CRC.c</FilePath>
+            </File>
+            <File>
+              <FileName>BSP_CRC.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Bsp\BSP_CRC.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
           <GroupName>APP</GroupName>
           <Files>
-            <File>
-              <FileName>M0_Menu_Test.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\User\App\M0_Menu_Test.c</FilePath>
-            </File>
-            <File>
-              <FileName>M0_Menu_Test.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\App\M0_Menu_Test.h</FilePath>
-            </File>
             <File>
               <FileName>Vision.c</FileName>
               <FileType>1</FileType>
@@ -751,6 +751,116 @@
               <FileName>vofa.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\User\App\vofa.h</FilePath>
+            </File>
+            <File>
+              <FileName>APP_SENSOR.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\App\APP_SENSOR.c</FilePath>
+            </File>
+            <File>
+              <FileName>APP_SENSOR.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\App\APP_SENSOR.h</FilePath>
+            </File>
+            <File>
+              <FileName>motor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\App\motor.c</FilePath>
+            </File>
+            <File>
+              <FileName>motor.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\App\motor.h</FilePath>
+            </File>
+            <File>
+              <FileName>tracking.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\App\tracking.c</FilePath>
+            </File>
+            <File>
+              <FileName>tracking.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\App\tracking.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Task</GroupName>
+          <Files>
+            <File>
+              <FileName>Task_Types.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Task\Task_Types.h</FilePath>
+            </File>
+            <File>
+              <FileName>Task_Hmi.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\Task\Task_Hmi.c</FilePath>
+            </File>
+            <File>
+              <FileName>Task_Hmi.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Task\Task_Hmi.h</FilePath>
+            </File>
+            <File>
+              <FileName>Task_Manager.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\Task\Task_Manager.c</FilePath>
+            </File>
+            <File>
+              <FileName>Task_Manager.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Task\Task_Manager.h</FilePath>
+            </File>
+            <File>
+              <FileName>Task2_CarLap.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\Task\Task2_CarLap.c</FilePath>
+            </File>
+            <File>
+              <FileName>Task2_CarLap.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Task\Task2_CarLap.h</FilePath>
+            </File>
+            <File>
+              <FileName>Task3_BallMove.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\Task\Task3_BallMove.c</FilePath>
+            </File>
+            <File>
+              <FileName>Task3_BallMove.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Task\Task3_BallMove.h</FilePath>
+            </File>
+            <File>
+              <FileName>Task4_CarToB.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\Task\Task4_CarToB.c</FilePath>
+            </File>
+            <File>
+              <FileName>Task4_CarToB.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Task\Task4_CarToB.h</FilePath>
+            </File>
+            <File>
+              <FileName>Task5_CarLapBalance.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\Task\Task5_CarLapBalance.c</FilePath>
+            </File>
+            <File>
+              <FileName>Task5_CarLapBalance.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Task\Task5_CarLapBalance.h</FilePath>
+            </File>
+            <File>
+              <FileName>Task6_ArbitraryPosition.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\Task\Task6_ArbitraryPosition.c</FilePath>
+            </File>
+            <File>
+              <FileName>Task6_ArbitraryPosition.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Task\Task6_ArbitraryPosition.h</FilePath>
             </File>
           </Files>
         </Group>

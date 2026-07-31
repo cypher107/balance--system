@@ -28,9 +28,13 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "OLED.h"
-#include "M0_Menu_Test.h"
 #include "Vision.h"
 #include "BallBeam.h"
+#include "Task_Hmi.h"
+#include "Task_Manager.h"
+#include "APP_SENSOR.h"
+#include "motor.h"
+#include "tracking.h"
 #include "dwt_time.h"
 
 /* USER CODE END Includes */
@@ -53,7 +57,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-uint8_t oled_menu_ready = 0U;
+uint8_t oled_ready = 0U;
 
 /* USER CODE END PV */
 
@@ -103,21 +107,32 @@ int main(void)
   MX_UART4_Init();
   MX_UART5_Init();
   MX_USART1_UART_Init();
+  MX_USART2_UART_Init();
   MX_USART3_UART_Init();
   MX_I2C1_Init();
+  MX_TIM3_Init();
+  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
   DWT_Time_Init();
   Vision_Init(&huart4);
   BallBeam_Init();
-  BallBeam_SetRun(1U);
+  BallBeam_SetRun(0U);
+  TaskHmi_Init(&huart2);
+  APP_SENSOR_Init(&huart3);
+  Motor_Init();
+  Tracking_Init();
   if (HAL_I2C_IsDeviceReady(&hi2c1,
                             (uint16_t)(OLED_ADDRESS << 1U),
                             2U,
                             10U) == HAL_OK)
   {
-    M0_MenuTest_Init();
-    oled_menu_ready = 1U;
+    oled_ready = 1U;
   }
+  TaskManager_Init(oled_ready);
+
+  /* Wait for the motor driver to finish powering up, then force homing. */
+  HAL_Delay(300U);
+  BallBeam_TriggerHome();
 
   /* USER CODE END 2 */
 
@@ -130,10 +145,9 @@ int main(void)
     /* USER CODE BEGIN 3 */
     Vision_Task();
     BallBeam_Task();
-    if (oled_menu_ready != 0U)
-    {
-      M0_MenuTest_Task();
-    }
+    TaskHmi_Task();
+    APP_SENSOR_Task();
+    TaskManager_Task();
   }
   /* USER CODE END 3 */
 }
@@ -183,29 +197,17 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)
   Vision_UART_RxEventCallback(huart, size);
 }
 
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+  TaskHmi_UART_RxCpltCallback(huart);
+  APP_SENSOR_UART_RxCpltCallback(huart);
+}
+
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
   Vision_UART_ErrorCallback(huart);
-}
-
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-  if (GPIO_Pin == KEY_UP_Pin)
-  {
-    M0_MenuTest_Input(M0_MENU_KEY_UP);
-  }
-  else if (GPIO_Pin == KEY_DOWN_Pin)
-  {
-    M0_MenuTest_Input(M0_MENU_KEY_DOWN);
-  }
-  else if (GPIO_Pin == KEY_ENTER_Pin)
-  {
-    M0_MenuTest_Input(M0_MENU_KEY_OK);
-  }
-  else if (GPIO_Pin == KEY_BACK_Pin)
-  {
-    M0_MenuTest_Input(M0_MENU_KEY_GO);
-  }
+  TaskHmi_UART_ErrorCallback(huart);
+  APP_SENSOR_UART_ErrorCallback(huart);
 }
 
 /* USER CODE END 4 */

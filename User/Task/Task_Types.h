@@ -1,0 +1,13 @@
+#ifndef __TASK_TYPES_H
+#define __TASK_TYPES_H
+
+typedef enum
+{
+  TASK_RESULT_RUNNING = 0,
+  TASK_RESULT_DONE,
+  TASK_RESULT_TIMEOUT,
+  TASK_RESULT_NOT_IMPLEMENTED,
+  TASK_RESULT_STOPPED
+} Task_Result_t;
+
+#endif
