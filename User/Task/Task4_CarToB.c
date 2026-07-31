@@ -1,17 +1,15 @@
 #include "Task4_CarToB.h"
 
-#include "APP_SENSOR.h"
 #include "BallBeam.h"
 #include "motor.h"
 #include "tracking.h"
 
 #define TASK4_CONTROL_PERIOD_MS        10U
 #define TASK4_TIMEOUT_MS               20000U
-#define TASK4_FINISH_FIRST_SENSOR      4U
-#define TASK4_FINISH_SENSOR_NUM        4U
 #define TASK4_DEFAULT_TARGET_CM        12.5f
 #define TASK4_DEFAULT_MOTOR_SPEED_RPM  300U
 #define TASK4_DEFAULT_MOTOR_ACCEL      255U
+#define TASK4_DEFAULT_RUN_TIME_MS        8000U
 
 static Task4_Stage_t task4_stage;
 static uint32_t task4_start_tick_ms;
@@ -35,26 +33,26 @@ volatile float g_task4_kd_debug = 7.0f;
 volatile float g_task4_position_hold_cm_debug = 0.1f;
 volatile float g_task4_integral_limit_debug = 20.0f;
 volatile float g_task4_integral_range_cm_debug = 4.0f;
-volatile float g_task4_min_correction_pulse_debug = 40.0f;
+volatile float g_task4_min_correction_pulse_debug = 60.0f;
 volatile float g_task4_min_full_error_cm_debug = 2.0f;
 volatile int32_t g_task4_max_motor_pulse_debug = 100;
 
 volatile float g_task4_tracking_kp_debug = 18.0f;
 volatile float g_task4_tracking_ki_debug = 0.0f;
 volatile float g_task4_tracking_kd_debug = 0.0f;
-volatile float g_task4_tracking_base_speed_debug = 200.0f;
+volatile float g_task4_tracking_base_speed_debug = 145.0f;
 volatile float g_task4_tracking_left_scale_debug = 1.3f;
 volatile float g_task4_tracking_right_scale_debug = 1.0f;
 
-volatile int32_t g_task4_start_tilt_pulse_debug = 40;
-volatile int32_t g_task4_stop_tilt_pulse_debug = -40;
+volatile int32_t g_task4_start_tilt_pulse_debug = -70;
+volatile int32_t g_task4_stop_tilt_pulse_debug = 70;
 volatile uint32_t g_task4_start_tilt_lead_ms_debug = 150U;
 volatile uint32_t g_task4_start_tilt_hold_ms_debug = 400U;
 volatile uint32_t g_task4_stop_tilt_lead_ms_debug = 150U;
 volatile uint32_t g_task4_stop_tilt_hold_ms_debug = 400U;
-volatile float g_task4_min_run_time_s_debug = 3.0f;
-volatile uint8_t g_task4_finish_sensor_count_debug = 3U;
-volatile uint8_t g_task4_finish_middle_count_debug;
+volatile uint32_t g_task4_run_time_ms_debug = TASK4_DEFAULT_RUN_TIME_MS;
+volatile uint32_t g_task4_car_elapsed_ms_debug;
+volatile uint32_t g_task4_stop_trigger_ms_debug;
 volatile int16_t g_task4_locked_left_speed_debug;
 volatile int16_t g_task4_locked_right_speed_debug;
 volatile uint32_t g_task4_car_start_count_debug;
@@ -137,46 +135,19 @@ static void Task4_ApplyBallBeamSettings(void)
   config->motor_acceleration = TASK4_DEFAULT_MOTOR_ACCEL;
 }
 
-static uint32_t Task4_GetMinRunTimeMs(void)
+static uint32_t Task4_GetRunTimeMs(void)
 {
-  float run_time_s = g_task4_min_run_time_s_debug;
+  uint32_t run_time_ms = g_task4_run_time_ms_debug;
 
-  if (run_time_s <= 0.0f)
+  if (run_time_ms < 500U)
   {
-    return 0U;
+    return 500U;
   }
-  if (run_time_s >= ((float)TASK4_TIMEOUT_MS * 0.001f))
+  if (run_time_ms >= TASK4_TIMEOUT_MS)
   {
-    return TASK4_TIMEOUT_MS;
+    return TASK4_TIMEOUT_MS - 1U;
   }
-  return (uint32_t)(run_time_s * 1000.0f);
-}
-
-static uint8_t Task4_OnFinishLine(void)
-{
-  uint8_t black_count = 0U;
-  uint8_t required_count = g_task4_finish_sensor_count_debug;
-  uint8_t index;
-
-  if ((required_count == 0U) ||
-      (required_count > TASK4_FINISH_SENSOR_NUM))
-  {
-    required_count = 3U;
-  }
-
-  for (index = TASK4_FINISH_FIRST_SENSOR;
-       index < (TASK4_FINISH_FIRST_SENSOR + TASK4_FINISH_SENSOR_NUM);
-       index++)
-  {
-    if (g_grayscale_values_debug[index] == 1U)
-    {
-      black_count++;
-    }
-  }
-  g_task4_finish_middle_count_debug = black_count;
-
-  return ((g_tracking_sensor_valid_debug != 0U) &&
-          (black_count >= required_count)) ? 1U : 0U;
+  return run_time_ms;
 }
 
 void Task4_CarMotorStart(void)
@@ -260,10 +231,11 @@ void Task4_CarToB_Start(uint32_t now_ms)
   g_task4_car_running_debug = 0U;
   g_task4_elapsed_ms_debug = 0U;
   g_task4_stage_elapsed_ms_debug = 0U;
+  g_task4_car_elapsed_ms_debug = 0U;
+  g_task4_stop_trigger_ms_debug = 0U;
   g_task4_position_cm_debug = g_ballbeam_position_debug;
   g_task4_error_cm_debug =
       g_task4_target_position_cm_debug - g_task4_position_cm_debug;
-  g_task4_finish_middle_count_debug = 0U;
   g_task4_locked_left_speed_debug = 0;
   g_task4_locked_right_speed_debug = 0;
 
@@ -280,6 +252,18 @@ Task_Result_t Task4_CarToB_Update(uint32_t now_ms)
 {
   uint32_t elapsed_ms = now_ms - task4_start_tick_ms;
   uint32_t stage_elapsed_ms = now_ms - task4_stage_start_tick_ms;
+  uint32_t run_time_ms = Task4_GetRunTimeMs();
+  uint32_t stop_lead_ms = g_task4_stop_tilt_lead_ms_debug;
+
+  if (stop_lead_ms >= run_time_ms)
+  {
+    stop_lead_ms = run_time_ms - 1U;
+  }
+  g_task4_stop_trigger_ms_debug = run_time_ms - stop_lead_ms;
+  if (task4_car_start_tick_ms != 0U)
+  {
+    g_task4_car_elapsed_ms_debug = now_ms - task4_car_start_tick_ms;
+  }
 
   Task4_ApplyTrackingSettings();
   Task4_ApplyBallBeamSettings();
@@ -315,15 +299,16 @@ Task_Result_t Task4_CarToB_Update(uint32_t now_ms)
         ((now_ms - task4_car_start_tick_ms) >=
          g_task4_start_tilt_hold_ms_debug))
     {
-      BallBeam_SetRun(1U);
+      /* Disable mid-run PID while tuning start/stop compensation. */
+      BallBeam_SetRun(0U);
+      BallBeam_CommandAbsolutePulse(0);
       Task4_SetStage(TASK4_STAGE_TRACKING, now_ms);
     }
   }
   else if (task4_stage == TASK4_STAGE_TRACKING)
   {
     Task4_RunCarTracking(now_ms);
-    if ((elapsed_ms >= Task4_GetMinRunTimeMs()) &&
-        (Task4_OnFinishLine() != 0U))
+    if (g_task4_car_elapsed_ms_debug >= g_task4_stop_trigger_ms_debug)
     {
       Task4_BeginStopCompensation(now_ms);
     }
