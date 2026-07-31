@@ -10,9 +10,12 @@
 #define BALLBEAM_DEFAULT_DT_S       0.02f
 #define BALLBEAM_MIN_DT_S           0.001f
 #define BALLBEAM_MAX_DT_S           0.20f
-#define BALLBEAM_HARD_PULSE_LIMIT   500
-#define BALLBEAM_POSITION_HOLD_CM   1.0f
+#define BALLBEAM_HARD_PULSE_LIMIT   250
+#define BALLBEAM_POSITION_HOLD_CM   0.5f
 #define BALLBEAM_HOME_MODE          0U
+#define BALLBEAM_TWO_PI             6.2831853f
+#define BALLBEAM_MOTOR_COMMAND_MIN_PERIOD_MS 50U
+#define BALLBEAM_MOTOR_COMMAND_RESEND_MS     200U
 
 typedef struct
 {
@@ -28,6 +31,9 @@ typedef struct
   uint8_t run_requested;
   uint8_t motor_stopped;
   int32_t last_motor_pulse;
+  uint32_t last_motor_command_tick_ms;
+  float filtered_pid_output;
+  float limited_pid_output;
 } BallBeam_Controller_t;
 
 static BallBeam_Controller_t ballbeam;
@@ -36,6 +42,7 @@ volatile uint8_t g_ballbeam_state_debug;
 volatile uint8_t g_ballbeam_run_debug;
 volatile int8_t g_ballbeam_motor_direction_debug;
 volatile float g_ballbeam_kp_debug;
+volatile float g_ballbeam_ki_debug;
 volatile float g_ballbeam_kd_debug;
 volatile float g_ballbeam_target_position_cm_debug;
 volatile float g_ballbeam_position_debug;
@@ -43,10 +50,19 @@ volatile float g_ballbeam_error_debug;
 volatile float g_ballbeam_position_dt_debug;
 volatile float g_ballbeam_p_output_debug;
 volatile float g_ballbeam_d_output_debug;
+volatile float g_ballbeam_pid_raw_output_debug;
+volatile float g_ballbeam_pid_filtered_output_debug;
 volatile float g_ballbeam_pid_output_debug;
+volatile float g_ballbeam_output_lpf_cutoff_hz_debug = 2.0f;
+volatile float g_ballbeam_output_slew_rate_debug = 200.0f;
+volatile float g_ballbeam_min_correction_pulse_debug;
+volatile float g_ballbeam_min_correction_full_error_cm_debug = 2.0f;
 volatile uint8_t g_ballbeam_hold_debug;
 volatile int32_t g_ballbeam_motor_pulse_debug;
+volatile int32_t g_ballbeam_motor_sent_pulse_debug;
 volatile float g_ballbeam_motor_angle_debug;
+volatile uint32_t g_ballbeam_motor_command_count_debug;
+volatile uint32_t g_ballbeam_motor_resend_count_debug;
 volatile uint32_t g_ballbeam_control_count_debug;
 volatile uint32_t g_ballbeam_position_count_debug;
 volatile uint32_t g_ballbeam_stale_count_debug;
@@ -85,6 +101,47 @@ static int32_t BallBeam_RoundToInt(float value)
                            (int32_t)(value - 0.5f);
 }
 
+static float BallBeam_FilterOutput(float input, float dt_s)
+{
+  float cutoff_hz = g_ballbeam_output_lpf_cutoff_hz_debug;
+  float time_constant_s;
+  float alpha;
+
+  /* A non-positive cutoff disables the filter for quick A/B testing. */
+  if (cutoff_hz <= 0.0f)
+  {
+    ballbeam.filtered_pid_output = input;
+    return input;
+  }
+  cutoff_hz = BallBeam_ClampFloat(cutoff_hz, 0.1f, 100.0f);
+  time_constant_s = 1.0f / (BALLBEAM_TWO_PI * cutoff_hz);
+  alpha = dt_s / (time_constant_s + dt_s);
+  ballbeam.filtered_pid_output +=
+      alpha * (input - ballbeam.filtered_pid_output);
+  return ballbeam.filtered_pid_output;
+}
+
+static float BallBeam_LimitOutputSlew(float input, float dt_s)
+{
+  float slew_rate = g_ballbeam_output_slew_rate_debug;
+  float max_delta;
+  float delta;
+
+  /* A non-positive rate disables slew limiting for quick A/B testing. */
+  if (slew_rate <= 0.0f)
+  {
+    ballbeam.limited_pid_output = input;
+    return input;
+  }
+  slew_rate = BallBeam_ClampFloat(slew_rate, 1.0f, 10000.0f);
+  max_delta = slew_rate * dt_s;
+  delta = BallBeam_ClampFloat(input - ballbeam.limited_pid_output,
+                              -max_delta,
+                              max_delta);
+  ballbeam.limited_pid_output += delta;
+  return ballbeam.limited_pid_output;
+}
+
 static void BallBeam_SetState(BallBeam_State_t state)
 {
   ballbeam.state = state;
@@ -105,13 +162,34 @@ static void BallBeam_StopMotor(void)
 
 static void BallBeam_ResetControl(void)
 {
+  float initial_output = 0.0f;
+
+  /* Preserve the current absolute motor target when entering closed loop.
+     This prevents an open-loop to closed-loop command discontinuity. */
+  if ((ballbeam.last_motor_pulse != INT32_MAX) &&
+      (BallBeam_AbsFloat(ballbeam.config.motor_direction) > 0.1f))
+  {
+    initial_output =
+        ((float)ballbeam.last_motor_pulse -
+         (float)ballbeam.config.motor_center_pulse) /
+        ballbeam.config.motor_direction;
+    initial_output = BallBeam_ClampFloat(
+        initial_output,
+        (float)-ballbeam.config.max_motor_pulse,
+        (float)ballbeam.config.max_motor_pulse);
+  }
+
   PID_Reset(&ballbeam.position_pid);
   ballbeam.last_position_cycles = 0U;
   g_ballbeam_error_debug = 0.0f;
   g_ballbeam_position_dt_debug = 0.0f;
   g_ballbeam_p_output_debug = 0.0f;
   g_ballbeam_d_output_debug = 0.0f;
-  g_ballbeam_pid_output_debug = 0.0f;
+  g_ballbeam_pid_raw_output_debug = 0.0f;
+  g_ballbeam_pid_filtered_output_debug = initial_output;
+  g_ballbeam_pid_output_debug = initial_output;
+  ballbeam.filtered_pid_output = initial_output;
+  ballbeam.limited_pid_output = initial_output;
   g_ballbeam_hold_debug = 0U;
 }
 
@@ -132,6 +210,8 @@ static void BallBeam_SendSignedPulse(int32_t signed_pulse)
 {
   uint8_t direction;
   uint32_t pulse;
+  uint32_t now_ms = HAL_GetTick();
+  uint8_t resend = 0U;
 
   signed_pulse = BallBeam_ClampPulse(signed_pulse);
 
@@ -147,10 +227,27 @@ static void BallBeam_SendSignedPulse(int32_t signed_pulse)
     g_ballbeam_motor_angle_debug = 0.0f;
   }
 
-  if ((ballbeam.config.motor_output_enabled == 0U) ||
-      (signed_pulse == ballbeam.last_motor_pulse))
+  if (ballbeam.config.motor_output_enabled == 0U)
   {
     return;
+  }
+
+  if (ballbeam.last_motor_pulse != INT32_MAX)
+  {
+    if (signed_pulse == ballbeam.last_motor_pulse)
+    {
+      if ((now_ms - ballbeam.last_motor_command_tick_ms) <
+          BALLBEAM_MOTOR_COMMAND_RESEND_MS)
+      {
+        return;
+      }
+      resend = 1U;
+    }
+    else if ((now_ms - ballbeam.last_motor_command_tick_ms) <
+             BALLBEAM_MOTOR_COMMAND_MIN_PERIOD_MS)
+    {
+      return;
+    }
   }
 
   if (signed_pulse >= 0)
@@ -172,7 +269,14 @@ static void BallBeam_SendSignedPulse(int32_t signed_pulse)
                      true,
                      false);
   ballbeam.last_motor_pulse = signed_pulse;
+  ballbeam.last_motor_command_tick_ms = now_ms;
   ballbeam.motor_stopped = 0U;
+  g_ballbeam_motor_sent_pulse_debug = signed_pulse;
+  g_ballbeam_motor_command_count_debug++;
+  if (resend != 0U)
+  {
+    g_ballbeam_motor_resend_count_debug++;
+  }
 }
 
 static void BallBeam_SendAbsolutePulse(float pid_output)
@@ -192,6 +296,8 @@ static void BallBeam_ProcessPosition(const Vision_BallSample_t *sample,
   float dt_s = BALLBEAM_DEFAULT_DT_S;
   float error;
   float pid_output;
+  float minimum_correction;
+  float minimum_correction_scale;
 
   if ((sample->position_cm < ballbeam.config.position_min_cm) ||
       (sample->position_cm > ballbeam.config.position_max_cm))
@@ -232,12 +338,14 @@ static void BallBeam_ProcessPosition(const Vision_BallSample_t *sample,
 
   if ((g_ballbeam_kp_debug >= 0.0f) &&
       (g_ballbeam_kp_debug <= 1000.0f) &&
+      (g_ballbeam_ki_debug >= 0.0f) &&
+      (g_ballbeam_ki_debug <= 1000.0f) &&
       (g_ballbeam_kd_debug >= 0.0f) &&
       (g_ballbeam_kd_debug <= 1000.0f))
   {
     PID_SetTunings(&ballbeam.position_pid,
                    g_ballbeam_kp_debug,
-                   0.0f,
+                   g_ballbeam_ki_debug,
                    g_ballbeam_kd_debug);
   }
   ballbeam.config.motor_direction =
@@ -250,9 +358,15 @@ static void BallBeam_ProcessPosition(const Vision_BallSample_t *sample,
     g_ballbeam_error_debug = error;
     g_ballbeam_p_output_debug = ballbeam.position_pid.proportional;
     g_ballbeam_d_output_debug = 0.0f;
+    g_ballbeam_pid_raw_output_debug = 0.0f;
+    pid_output = BallBeam_FilterOutput(0.0f, dt_s);
+    g_ballbeam_pid_filtered_output_debug = pid_output;
+    pid_output = BallBeam_LimitOutputSlew(pid_output, dt_s);
+    g_ballbeam_pid_output_debug = pid_output;
     g_ballbeam_hold_debug = 1U;
     g_ballbeam_hold_count_debug++;
     BallBeam_SetState(BALLBEAM_STATE_RUN);
+    BallBeam_SendAbsolutePulse(pid_output);
     return;
   }
 
@@ -271,6 +385,30 @@ static void BallBeam_ProcessPosition(const Vision_BallSample_t *sample,
   pid_output = BallBeam_ClampFloat(pid_output,
                                   (float)-ballbeam.config.max_motor_pulse,
                                   (float)ballbeam.config.max_motor_pulse);
+  minimum_correction = g_ballbeam_min_correction_pulse_debug;
+  if ((minimum_correction > 0.0f) &&
+      (minimum_correction <=
+       (float)ballbeam.config.max_motor_pulse) &&
+      (g_ballbeam_min_correction_full_error_cm_debug >
+       BALLBEAM_POSITION_HOLD_CM))
+  {
+    minimum_correction_scale =
+        (BallBeam_AbsFloat(error) - BALLBEAM_POSITION_HOLD_CM) /
+        (g_ballbeam_min_correction_full_error_cm_debug -
+         BALLBEAM_POSITION_HOLD_CM);
+    minimum_correction_scale = BallBeam_ClampFloat(
+        minimum_correction_scale, 0.0f, 1.0f);
+    minimum_correction *= minimum_correction_scale;
+    if (BallBeam_AbsFloat(pid_output) < minimum_correction)
+    {
+      pid_output = ((error * ballbeam.config.position_direction) >= 0.0f) ?
+          minimum_correction : -minimum_correction;
+    }
+  }
+  g_ballbeam_pid_raw_output_debug = pid_output;
+  pid_output = BallBeam_FilterOutput(pid_output, dt_s);
+  g_ballbeam_pid_filtered_output_debug = pid_output;
+  pid_output = BallBeam_LimitOutputSlew(pid_output, dt_s);
   g_ballbeam_error_debug = ballbeam.position_pid.error;
   g_ballbeam_p_output_debug = ballbeam.position_pid.proportional;
   g_ballbeam_d_output_debug = ballbeam.position_pid.derivative;
@@ -314,21 +452,30 @@ void BallBeam_Init(void)
   ballbeam.run_requested = 0U;
   ballbeam.motor_stopped = 1U;
   ballbeam.last_motor_pulse = INT32_MAX;
+  ballbeam.last_motor_command_tick_ms = 0U;
 
   g_ballbeam_target_position_cm_debug = ballbeam.target_position_cm;
   g_ballbeam_run_debug = 0U;
   g_ballbeam_motor_direction_debug = 1;
   g_ballbeam_kp_debug = ballbeam.position_pid.kp;
+  g_ballbeam_ki_debug = ballbeam.position_pid.ki;
   g_ballbeam_kd_debug = ballbeam.position_pid.kd;
   g_ballbeam_position_debug = 0.0f;
   g_ballbeam_error_debug = 0.0f;
   g_ballbeam_position_dt_debug = 0.0f;
   g_ballbeam_p_output_debug = 0.0f;
   g_ballbeam_d_output_debug = 0.0f;
+  g_ballbeam_pid_raw_output_debug = 0.0f;
+  g_ballbeam_pid_filtered_output_debug = 0.0f;
   g_ballbeam_pid_output_debug = 0.0f;
+  g_ballbeam_min_correction_pulse_debug = 0.0f;
+  g_ballbeam_min_correction_full_error_cm_debug = 2.0f;
   g_ballbeam_hold_debug = 0U;
   g_ballbeam_motor_pulse_debug = 0;
+  g_ballbeam_motor_sent_pulse_debug = 0;
   g_ballbeam_motor_angle_debug = 0.0f;
+  g_ballbeam_motor_command_count_debug = 0U;
+  g_ballbeam_motor_resend_count_debug = 0U;
   g_ballbeam_control_count_debug = 0U;
   g_ballbeam_position_count_debug = 0U;
   g_ballbeam_stale_count_debug = 0U;

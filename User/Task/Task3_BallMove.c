@@ -8,11 +8,10 @@
 #define TASK3_CENTER_CM             12.5f
 #define TASK3_PLUS5_TARGET_CM       (TASK3_CENTER_CM + 5.0f)
 #define TASK3_MINUS5_TARGET_CM      (TASK3_CENTER_CM - 5.0f)
-#define TASK3_POSITION_TOLERANCE_CM 1.0f
+#define TASK3_POSITION_TOLERANCE_CM 0.5f
 #define TASK3_SWITCH_TOLERANCE_CM   1.0f
 #define TASK3_MINUS_SETTLE_MS       500U
 #define TASK3_MAX_SAMPLE_GAP_MS     150U
-#define TASK3_TIMEOUT_MS            5000U
 
 static Task3_Stage_t task3_stage;
 static uint32_t task3_start_tick_ms;
@@ -25,16 +24,24 @@ static uint16_t task3_last_open_loop_speed;
 static uint8_t task3_last_open_loop_acceleration;
 
 volatile uint8_t g_task3_stage_debug;
+volatile uint32_t g_task3_timeout_ms_debug;
+volatile uint8_t g_task3_auto_finish_debug;
 volatile float g_task3_target_debug;
 volatile float g_task3_position_debug;
 volatile float g_task3_error_debug;
 volatile uint32_t g_task3_settle_ms_debug;
 volatile int32_t g_task3_open_loop_pulse_debug = 60;
-volatile uint16_t g_task3_open_loop_speed_debug = 300U;
-volatile uint8_t g_task3_open_loop_acceleration_debug = 255U;
-volatile float g_task3_open_loop_switch_position_cm_debug = 17.5f;
-volatile float g_task3_return_kp_debug = 4.0f;
-volatile float g_task3_return_kd_debug = 3.0f;
+volatile uint16_t g_task3_open_loop_speed_debug = 180U;
+volatile uint8_t g_task3_open_loop_acceleration_debug = 80U;
+volatile float g_task3_open_loop_switch_position_cm_debug = 15.0f;
+volatile float g_task3_return_kp_debug = 16.0f;
+volatile float g_task3_return_ki_debug = 0.0f;
+volatile float g_task3_return_kd_debug = 25.0f;
+volatile float g_task3_return_integral_limit_debug = 20.0f;
+volatile float g_task3_return_integral_range_cm_debug = 4.0f;
+volatile float g_task3_return_min_pulse_debug = 60.0f;
+volatile float g_task3_return_min_full_error_cm_debug = 2.0f;
+volatile int32_t g_task3_return_max_pulse_debug = 100;
 
 static float Task3_Abs(float value)
 {
@@ -79,15 +86,54 @@ static void Task3_ApplyOpenLoopCommand(void)
 
 static void Task3_ApplyReturnTunings(void)
 {
+  BallBeam_Config_t *config = BallBeam_GetConfig();
+  PID_t *position_pid = BallBeam_GetPositionPID();
+
   if ((g_task3_return_kp_debug >= 0.0f) &&
       (g_task3_return_kp_debug <= 1000.0f))
   {
     g_ballbeam_kp_debug = g_task3_return_kp_debug;
   }
+  if ((g_task3_return_ki_debug >= 0.0f) &&
+      (g_task3_return_ki_debug <= 1000.0f))
+  {
+    g_ballbeam_ki_debug = g_task3_return_ki_debug;
+  }
   if ((g_task3_return_kd_debug >= 0.0f) &&
       (g_task3_return_kd_debug <= 1000.0f))
   {
     g_ballbeam_kd_debug = g_task3_return_kd_debug;
+  }
+  if ((g_task3_return_max_pulse_debug >= 1) &&
+      (g_task3_return_max_pulse_debug <= 250))
+  {
+    config->max_motor_pulse = g_task3_return_max_pulse_debug;
+  }
+  if ((g_task3_return_integral_limit_debug >= 0.0f) &&
+      (g_task3_return_integral_limit_debug <= 100.0f))
+  {
+    PID_SetIntegralLimit(position_pid,
+                         -g_task3_return_integral_limit_debug,
+                         g_task3_return_integral_limit_debug);
+  }
+  if ((g_task3_return_integral_range_cm_debug > 0.0f) &&
+      (g_task3_return_integral_range_cm_debug <= 10.0f))
+  {
+    PID_SetIntegralSeparation(position_pid,
+                              1U,
+                              g_task3_return_integral_range_cm_debug);
+  }
+  if ((g_task3_return_min_pulse_debug >= 0.0f) &&
+      (g_task3_return_min_pulse_debug <= 100.0f))
+  {
+    g_ballbeam_min_correction_pulse_debug =
+        g_task3_return_min_pulse_debug;
+  }
+  if ((g_task3_return_min_full_error_cm_debug > 0.5f) &&
+      (g_task3_return_min_full_error_cm_debug <= 10.0f))
+  {
+    g_ballbeam_min_correction_full_error_cm_debug =
+        g_task3_return_min_full_error_cm_debug;
   }
 }
 
@@ -151,7 +197,8 @@ Task_Result_t Task3_BallMove_Update(uint32_t now_ms)
     Task3_ApplyReturnTunings();
   }
 
-  if ((now_ms - task3_start_tick_ms) >= TASK3_TIMEOUT_MS)
+  if ((g_task3_timeout_ms_debug != 0U) &&
+      ((now_ms - task3_start_tick_ms) >= g_task3_timeout_ms_debug))
   {
     if (task3_stage == TASK3_STAGE_GO_PLUS5)
     {
@@ -192,16 +239,19 @@ Task_Result_t Task3_BallMove_Update(uint32_t now_ms)
       Task3_ApplyReturnTunings();
       BallBeam_SetTarget(TASK3_MINUS5_TARGET_CM);
       BallBeam_SetRun(1U);
+      /* Give the slower, filtered return stage its own timeout window. */
+      task3_start_tick_ms = now_ms;
       g_task3_target_debug = TASK3_MINUS5_TARGET_CM;
       Task3_SetStage(TASK3_STAGE_GO_MINUS5);
     }
   }
   else if (task3_stage == TASK3_STAGE_GO_MINUS5)
   {
-    if (Task3_TargetSettled(sample.position_cm,
-                            TASK3_MINUS5_TARGET_CM,
-                            TASK3_MINUS_SETTLE_MS,
-                            now_ms) != 0U)
+    if ((Task3_TargetSettled(sample.position_cm,
+                             TASK3_MINUS5_TARGET_CM,
+                             TASK3_MINUS_SETTLE_MS,
+                             now_ms) != 0U) &&
+        (g_task3_auto_finish_debug != 0U))
     {
       Task3_SetStage(TASK3_STAGE_DONE);
       return TASK_RESULT_DONE;

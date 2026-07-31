@@ -14,6 +14,8 @@ typedef enum
 } Task3_Stage_t;
 
 extern volatile uint8_t g_task3_stage_debug;
+extern volatile uint32_t g_task3_timeout_ms_debug;
+extern volatile uint8_t g_task3_auto_finish_debug;
 extern volatile float g_task3_target_debug;
 extern volatile float g_task3_position_debug;
 extern volatile float g_task3_error_debug;
@@ -23,7 +25,13 @@ extern volatile uint16_t g_task3_open_loop_speed_debug;
 extern volatile uint8_t g_task3_open_loop_acceleration_debug;
 extern volatile float g_task3_open_loop_switch_position_cm_debug;
 extern volatile float g_task3_return_kp_debug;
+extern volatile float g_task3_return_ki_debug;
 extern volatile float g_task3_return_kd_debug;
+extern volatile float g_task3_return_integral_limit_debug;
+extern volatile float g_task3_return_integral_range_cm_debug;
+extern volatile float g_task3_return_min_pulse_debug;
+extern volatile float g_task3_return_min_full_error_cm_debug;
+extern volatile int32_t g_task3_return_max_pulse_debug;
 
 void Task3_BallMove_Start(uint32_t now_ms);
 Task_Result_t Task3_BallMove_Update(uint32_t now_ms);
