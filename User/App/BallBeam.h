@@ -51,6 +51,7 @@ extern volatile float g_ballbeam_pid_filtered_output_debug;
 extern volatile float g_ballbeam_pid_output_debug;
 extern volatile float g_ballbeam_output_lpf_cutoff_hz_debug;
 extern volatile float g_ballbeam_output_slew_rate_debug;
+extern volatile float g_ballbeam_position_hold_cm_debug;
 extern volatile float g_ballbeam_min_correction_pulse_debug;
 extern volatile float g_ballbeam_min_correction_full_error_cm_debug;
 extern volatile uint8_t g_ballbeam_hold_debug;

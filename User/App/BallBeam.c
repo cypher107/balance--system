@@ -11,7 +11,7 @@
 #define BALLBEAM_MIN_DT_S           0.001f
 #define BALLBEAM_MAX_DT_S           0.20f
 #define BALLBEAM_HARD_PULSE_LIMIT   250
-#define BALLBEAM_POSITION_HOLD_CM   0.5f
+#define BALLBEAM_DEFAULT_POSITION_HOLD_CM 0.5f
 #define BALLBEAM_HOME_MODE          0U
 #define BALLBEAM_TWO_PI             6.2831853f
 #define BALLBEAM_MOTOR_COMMAND_MIN_PERIOD_MS 50U
@@ -55,6 +55,8 @@ volatile float g_ballbeam_pid_filtered_output_debug;
 volatile float g_ballbeam_pid_output_debug;
 volatile float g_ballbeam_output_lpf_cutoff_hz_debug = 2.0f;
 volatile float g_ballbeam_output_slew_rate_debug = 200.0f;
+volatile float g_ballbeam_position_hold_cm_debug =
+    BALLBEAM_DEFAULT_POSITION_HOLD_CM;
 volatile float g_ballbeam_min_correction_pulse_debug;
 volatile float g_ballbeam_min_correction_full_error_cm_debug = 2.0f;
 volatile uint8_t g_ballbeam_hold_debug;
@@ -298,6 +300,7 @@ static void BallBeam_ProcessPosition(const Vision_BallSample_t *sample,
   float pid_output;
   float minimum_correction;
   float minimum_correction_scale;
+  float position_hold_cm;
 
   if ((sample->position_cm < ballbeam.config.position_min_cm) ||
       (sample->position_cm > ballbeam.config.position_max_cm))
@@ -351,8 +354,10 @@ static void BallBeam_ProcessPosition(const Vision_BallSample_t *sample,
   ballbeam.config.motor_direction =
       (g_ballbeam_motor_direction_debug >= 0) ? 1.0f : -1.0f;
   error = ballbeam.target_position_cm - sample->position_cm;
+  position_hold_cm = BallBeam_ClampFloat(
+      g_ballbeam_position_hold_cm_debug, 0.0f, 2.0f);
 
-  if (BallBeam_AbsFloat(error) < BALLBEAM_POSITION_HOLD_CM)
+  if (BallBeam_AbsFloat(error) < position_hold_cm)
   {
     BallBeam_PrimePositionPid(sample->position_cm, error);
     g_ballbeam_error_debug = error;
@@ -390,12 +395,12 @@ static void BallBeam_ProcessPosition(const Vision_BallSample_t *sample,
       (minimum_correction <=
        (float)ballbeam.config.max_motor_pulse) &&
       (g_ballbeam_min_correction_full_error_cm_debug >
-       BALLBEAM_POSITION_HOLD_CM))
+       position_hold_cm))
   {
     minimum_correction_scale =
-        (BallBeam_AbsFloat(error) - BALLBEAM_POSITION_HOLD_CM) /
+        (BallBeam_AbsFloat(error) - position_hold_cm) /
         (g_ballbeam_min_correction_full_error_cm_debug -
-         BALLBEAM_POSITION_HOLD_CM);
+         position_hold_cm);
     minimum_correction_scale = BallBeam_ClampFloat(
         minimum_correction_scale, 0.0f, 1.0f);
     minimum_correction *= minimum_correction_scale;
@@ -468,6 +473,8 @@ void BallBeam_Init(void)
   g_ballbeam_pid_raw_output_debug = 0.0f;
   g_ballbeam_pid_filtered_output_debug = 0.0f;
   g_ballbeam_pid_output_debug = 0.0f;
+  g_ballbeam_position_hold_cm_debug =
+      BALLBEAM_DEFAULT_POSITION_HOLD_CM;
   g_ballbeam_min_correction_pulse_debug = 0.0f;
   g_ballbeam_min_correction_full_error_cm_debug = 2.0f;
   g_ballbeam_hold_debug = 0U;

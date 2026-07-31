@@ -30,6 +30,7 @@ extern volatile uint8_t g_task3_open_loop_hold_active_debug;
 extern volatile float g_task3_return_kp_debug;
 extern volatile float g_task3_return_ki_debug;
 extern volatile float g_task3_return_kd_debug;
+extern volatile float g_task3_return_hold_cm_debug;
 extern volatile float g_task3_return_integral_limit_debug;
 extern volatile float g_task3_return_integral_range_cm_debug;
 extern volatile float g_task3_return_min_pulse_debug;

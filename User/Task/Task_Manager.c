@@ -53,6 +53,10 @@ static const char *TaskManager_StatusText(void)
     if (stage == TASK2_STAGE_LAP) return "TRACK LAP";
     if (stage == TASK2_STAGE_FINISH_CONFIRM) return "FINISH LINE";
   }
+  if (task_manager_task_id == 4U)
+  {
+    return "CENTER HOLD";
+  }
   return "RUNNING";
 }
 
