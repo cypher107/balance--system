@@ -11,7 +11,9 @@ typedef enum
   TASK4_STAGE_TRACKING,
   TASK4_STAGE_STOP_COMPENSATE,
   TASK4_STAGE_DONE,
-  TASK4_STAGE_TIMEOUT
+  TASK4_STAGE_TIMEOUT,
+  TASK4_STAGE_START_RETURN_CENTER,
+  TASK4_STAGE_STOP_RETURN_CENTER
 } Task4_Stage_t;
 
 extern volatile uint8_t g_task4_active_debug;
@@ -32,6 +34,13 @@ extern volatile float g_task4_integral_range_cm_debug;
 extern volatile float g_task4_min_correction_pulse_debug;
 extern volatile float g_task4_min_full_error_cm_debug;
 extern volatile int32_t g_task4_max_motor_pulse_debug;
+extern volatile uint8_t g_task4_middle_pid_enable_debug;
+extern volatile float g_task4_middle_kp_debug;
+extern volatile float g_task4_middle_ki_debug;
+extern volatile float g_task4_middle_kd_debug;
+extern volatile float g_task4_middle_hold_cm_debug;
+extern volatile int32_t g_task4_middle_max_motor_pulse_debug;
+extern volatile int32_t g_task4_middle_bias_pulse_debug;
 
 extern volatile float g_task4_tracking_kp_debug;
 extern volatile float g_task4_tracking_ki_debug;
@@ -44,8 +53,19 @@ extern volatile int32_t g_task4_start_tilt_pulse_debug;
 extern volatile int32_t g_task4_stop_tilt_pulse_debug;
 extern volatile uint32_t g_task4_start_tilt_lead_ms_debug;
 extern volatile uint32_t g_task4_start_tilt_hold_ms_debug;
+extern volatile uint32_t g_task4_start_return_hold_ms_debug;
+extern volatile uint32_t g_task4_start_filter_ms_debug;
+extern volatile int32_t g_task4_start_filter_start_pulse_debug;
+extern volatile int32_t g_task4_start_filter_output_pulse_debug;
+extern volatile uint8_t g_task4_start_tilt_sent_debug;
 extern volatile uint32_t g_task4_stop_tilt_lead_ms_debug;
 extern volatile uint32_t g_task4_stop_tilt_hold_ms_debug;
+extern volatile uint32_t g_task4_stop_return_hold_ms_debug;
+extern volatile uint32_t g_task4_stop_command_delay_ms_debug;
+extern volatile uint32_t g_task4_stop_filter_ms_debug;
+extern volatile int32_t g_task4_stop_filter_start_pulse_debug;
+extern volatile int32_t g_task4_stop_filter_output_pulse_debug;
+extern volatile uint8_t g_task4_stop_tilt_sent_debug;
 extern volatile uint32_t g_task4_run_time_ms_debug;
 extern volatile uint32_t g_task4_car_elapsed_ms_debug;
 extern volatile uint32_t g_task4_stop_trigger_ms_debug;
@@ -53,6 +73,11 @@ extern volatile int16_t g_task4_locked_left_speed_debug;
 extern volatile int16_t g_task4_locked_right_speed_debug;
 extern volatile uint32_t g_task4_car_start_count_debug;
 extern volatile uint32_t g_task4_car_stop_count_debug;
+extern volatile uint8_t g_task4_car_ramp_active_debug;
+extern volatile uint32_t g_task4_car_ramp_elapsed_ms_debug;
+extern volatile int16_t g_task4_car_ramp_left_speed_debug;
+extern volatile int16_t g_task4_car_ramp_right_speed_debug;
+extern volatile uint32_t g_task4_car_ramp_ms_debug;
 
 void Task4_CarToB_Start(uint32_t now_ms);
 Task_Result_t Task4_CarToB_Update(uint32_t now_ms);

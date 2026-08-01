@@ -57,8 +57,10 @@ static const char *TaskManager_StatusText(void)
   {
     Task4_Stage_t stage = Task4_CarToB_GetStage();
     if (stage == TASK4_STAGE_START_COMPENSATE) return "START TILT";
+    if (stage == TASK4_STAGE_START_RETURN_CENTER) return "START ZERO";
     if (stage == TASK4_STAGE_TRACKING) return "TRACKING";
     if (stage == TASK4_STAGE_STOP_COMPENSATE) return "STOP TILT";
+    if (stage == TASK4_STAGE_STOP_RETURN_CENTER) return "STOP ZERO";
     if (stage == TASK4_STAGE_DONE) return "DONE";
     if (stage == TASK4_STAGE_TIMEOUT) return "TIMEOUT";
   }
