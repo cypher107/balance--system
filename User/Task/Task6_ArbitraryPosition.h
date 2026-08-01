@@ -7,5 +7,6 @@
 void Task6_ArbitraryPosition_Start(uint32_t now_ms);
 Task_Result_t Task6_ArbitraryPosition_Update(uint32_t now_ms);
 void Task6_ArbitraryPosition_Stop(void);
+void Task6_ArbitraryPosition_SetTarget(uint8_t target_cm);
 
 #endif

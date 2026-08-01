@@ -5,6 +5,7 @@
 #include "Task2_CarLap.h"
 #include "Task3_BallMove.h"
 #include "Task4_CarToB.h"
+#include "Task6_ArbitraryPosition.h"
 #include "tracking.h"
 
 #define TASK_HMI_FRAME_SIZE 8U
@@ -15,6 +16,7 @@
 #define TASK_HMI_CMD_TRACK_SET     0x19U
 #define TASK_HMI_CMD_BALL_RESET    0x1AU
 #define TASK_HMI_CMD_TRACK_RESET   0x1BU
+#define TASK_HMI_CMD_TASK6_TARGET  0x20U
 #define TASK_HMI_CMD_ZERO_PLUS     0x07U
 #define TASK_HMI_CMD_ZERO_MINUS    0x08U
 #define TASK_HMI_CMD_ZERO_CONFIRM  0x09U
@@ -252,6 +254,10 @@ static void TaskHmi_ApplyParameterCommand(uint8_t command,
     TaskHmi_SetTrackingParameters(TASK_HMI_TRACK_DEFAULT_P,
                                   TASK_HMI_TRACK_DEFAULT_DELAY_10MS);
   }
+  else if (command == TASK_HMI_CMD_TASK6_TARGET)
+  {
+    Task6_ArbitraryPosition_SetTarget(data0);
+  }
   else
   {
     return;
@@ -333,8 +339,9 @@ static void TaskHmi_ParseByte(uint8_t data)
       g_task_hmi_command_debug = command;
       g_task_hmi_command_count_debug++;
     }
-    else if ((command >= TASK_HMI_CMD_BALL_SET) &&
-             (command <= TASK_HMI_CMD_TRACK_RESET))
+    else if (((command >= TASK_HMI_CMD_BALL_SET) &&
+              (command <= TASK_HMI_CMD_TRACK_RESET)) ||
+             (command == TASK_HMI_CMD_TASK6_TARGET))
     {
       task_hmi_pending_parameter_data[0] = task_hmi_frame[3];
       task_hmi_pending_parameter_data[1] = task_hmi_frame[4];
