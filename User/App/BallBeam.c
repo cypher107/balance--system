@@ -490,7 +490,6 @@ void BallBeam_Init(void)
   g_ballbeam_hold_count_debug = 0U;
   g_ballbeam_home_command_count_debug = 0U;
   BallBeam_SetState(BALLBEAM_STATE_IDLE);
-  BallBeam_TriggerHome();
 }
 
 void BallBeam_Task(void)

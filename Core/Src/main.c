@@ -36,6 +36,7 @@
 #include "motor.h"
 #include "tracking.h"
 #include "dwt_time.h"
+#include "Emm_V5.h"
 
 /* USER CODE END Includes */
 
@@ -117,15 +118,13 @@ int main(void)
   Vision_Init(&huart4);
   BallBeam_Init();
   BallBeam_SetRun(0U);
+  HAL_Delay(300U);
+  Emm_V5_Origin_Trigger_Return(1U, 0U, false);
   TaskHmi_Init(&huart2);
   APP_SENSOR_Init(&huart3);
   Motor_Init();
   Tracking_Init();
   TaskManager_Init(1U);
-
-  /* Wait for the motor driver to finish powering up, then force homing. */
-  HAL_Delay(300U);
-  BallBeam_TriggerHome();
 
   /* USER CODE END 2 */
 
