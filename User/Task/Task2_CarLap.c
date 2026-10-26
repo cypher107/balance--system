@@ -19,7 +19,7 @@ volatile float g_task2_elapsed_s_debug;
 volatile float g_task2_min_lap_time_s_debug = 3.0f;
 volatile uint8_t g_task2_finish_sensor_count_debug = 3U;
 volatile uint8_t g_task2_finish_middle_count_debug;
-volatile float g_task2_finish_confirm_s_debug = 0.7f;
+volatile float g_task2_finish_confirm_s_debug = 0.66f;
 volatile int16_t g_task2_finish_left_speed_debug;
 volatile int16_t g_task2_finish_right_speed_debug;
 

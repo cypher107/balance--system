@@ -2,7 +2,6 @@ build\task3_ballmove.o: ..\User\Task\Task3_BallMove.c
 build\task3_ballmove.o: ..\User\Task\Task3_BallMove.h
 build\task3_ballmove.o: C:\Users\17014\AppData\Local\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
 build\task3_ballmove.o: ..\User\Task\Task_Types.h
-build\task3_ballmove.o: C:\Users\17014\AppData\Local\Keil_v5\ARM\ARMCC\Bin\..\include\limits.h
 build\task3_ballmove.o: ../User/App/BallBeam.h
 build\task3_ballmove.o: ../User/Althgrom/pid.h
 build\task3_ballmove.o: ../User/App/Vision.h

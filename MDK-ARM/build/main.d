@@ -47,3 +47,5 @@ build\main.o: ../User/App/APP_SENSOR.h
 build\main.o: ../User/App/motor.h
 build\main.o: ../User/App/tracking.h
 build\main.o: ../User/Althgrom/dwt_time.h
+build\main.o: ../User/ZDT/Emm_V5.h
+build\main.o: C:\Users\17014\AppData\Local\Keil_v5\ARM\ARMCC\Bin\..\include\stdbool.h

@@ -32,3 +32,13 @@ build\task_hmi.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h
 build\task_hmi.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h
 build\task_hmi.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h
 build\task_hmi.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h
+build\task_hmi.o: ../User/App/BallBeam.h
+build\task_hmi.o: ../User/Althgrom/pid.h
+build\task_hmi.o: ../User/ZDT/Emm_V5.h
+build\task_hmi.o: C:\Users\17014\AppData\Local\Keil_v5\ARM\ARMCC\Bin\..\include\stdbool.h
+build\task_hmi.o: ..\User\Task\Task2_CarLap.h
+build\task_hmi.o: ..\User\Task\Task_Types.h
+build\task_hmi.o: ..\User\Task\Task3_BallMove.h
+build\task_hmi.o: ..\User\Task\Task4_CarToB.h
+build\task_hmi.o: ..\User\Task\Task6_ArbitraryPosition.h
+build\task_hmi.o: ../User/App/tracking.h

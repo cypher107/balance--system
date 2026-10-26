@@ -4,7 +4,7 @@
 #include "Vision.h"
 
 #define TASK3_PLUS5_TARGET_CM    17.5f
-#define TASK3_MINUS5_TARGET_CM   7.0f
+#define TASK3_MINUS5_TARGET_CM   7.5f
 #define TASK3_SWITCH_TIME_UNIT_MS 10U
 #define TASK3_HARD_PULSE_LIMIT   250
 

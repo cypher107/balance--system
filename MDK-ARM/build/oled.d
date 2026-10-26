@@ -1,8 +1,5 @@
 build\oled.o: ..\User\Bsp\OLED.c
 build\oled.o: ..\User\Bsp\OLED.h
-build\oled.o: C:\Users\17014\AppData\Local\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
-build\oled.o: ..\User\Bsp\OLEDFont.h
-build\oled.o: ../Core/Inc/i2c.h
 build\oled.o: ../Core/Inc/main.h
 build\oled.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h
 build\oled.o: ../Core/Inc/stm32f1xx_hal_conf.h
@@ -11,6 +8,7 @@ build\oled.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_def.h
 build\oled.o: ../Drivers/CMSIS/Device/ST/STM32F1xx/Include/stm32f1xx.h
 build\oled.o: ../Drivers/CMSIS/Device/ST/STM32F1xx/Include/stm32f103xe.h
 build\oled.o: ../Drivers/CMSIS/Include/core_cm3.h
+build\oled.o: C:\Users\17014\AppData\Local\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
 build\oled.o: ../Drivers/CMSIS/Include/cmsis_version.h
 build\oled.o: ../Drivers/CMSIS/Include/cmsis_compiler.h
 build\oled.o: ../Drivers/CMSIS/Include/cmsis_armcc.h
@@ -33,3 +31,8 @@ build\oled.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h
 build\oled.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h
 build\oled.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h
 build\oled.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h
+build\oled.o: ../Core/Inc/i2c.h
+build\oled.o: ..\User\Bsp\OLEDFont.h
+build\oled.o: C:\Users\17014\AppData\Local\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
+build\oled.o: C:\Users\17014\AppData\Local\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
+build\oled.o: C:\Users\17014\AppData\Local\Keil_v5\ARM\ARMCC\Bin\..\include\stdlib.h

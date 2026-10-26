@@ -2,3 +2,8 @@ build\task5_carlapbalance.o: ..\User\Task\Task5_CarLapBalance.c
 build\task5_carlapbalance.o: ..\User\Task\Task5_CarLapBalance.h
 build\task5_carlapbalance.o: C:\Users\17014\AppData\Local\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
 build\task5_carlapbalance.o: ..\User\Task\Task_Types.h
+build\task5_carlapbalance.o: ../User/App/BallBeam.h
+build\task5_carlapbalance.o: ../User/Althgrom/pid.h
+build\task5_carlapbalance.o: ..\User\Task\Task3_BallMove.h
+build\task5_carlapbalance.o: ../User/App/motor.h
+build\task5_carlapbalance.o: ../User/App/tracking.h

@@ -6,8 +6,6 @@ build\task_manager.o: C:\Users\17014\AppData\Local\Keil_v5\ARM\ARMCC\Bin\..\incl
 build\task_manager.o: ../User/App/BallBeam.h
 build\task_manager.o: ../User/Althgrom/pid.h
 build\task_manager.o: ../User/Bsp/OLED.h
-build\task_manager.o: ..\User\Task\Task_Hmi.h
-build\task_manager.o: ../Core/Inc/usart.h
 build\task_manager.o: ../Core/Inc/main.h
 build\task_manager.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h
 build\task_manager.o: ../Core/Inc/stm32f1xx_hal_conf.h
@@ -38,6 +36,9 @@ build\task_manager.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h
 build\task_manager.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h
 build\task_manager.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h
 build\task_manager.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h
+build\task_manager.o: ../Core/Inc/i2c.h
+build\task_manager.o: ..\User\Task\Task_Hmi.h
+build\task_manager.o: ../Core/Inc/usart.h
 build\task_manager.o: ..\User\Task\Task2_CarLap.h
 build\task_manager.o: ..\User\Task\Task3_BallMove.h
 build\task_manager.o: ..\User\Task\Task4_CarToB.h
